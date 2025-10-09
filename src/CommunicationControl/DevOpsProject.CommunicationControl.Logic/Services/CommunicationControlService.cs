@@ -57,9 +57,21 @@ namespace DevOpsProject.CommunicationControl.Logic.Services
             return result;
         }
 
+        public async Task<InterferenceModel> GetInterferenceModel(Guid interferenceId)
+        {
+            var result = await _redisService.GetAsync<InterferenceModel>(GetInterferenceKey(interferenceId));
+            return result;
+        }
+
         public async Task<List<HiveModel>> GetAllHives()
         {
             var result = await _redisService.GetAllAsync<HiveModel>($"{_redisKeys.HiveKey}:");
+            return result;
+        }
+
+        public async Task<List<InterferenceModel>> GetAllInterferences()
+        {
+            var result = await _redisService.GetAllAsync<InterferenceModel>($"{_redisKeys.InterferenceKey}:");
             return result;
         }
 
@@ -186,5 +198,167 @@ namespace DevOpsProject.CommunicationControl.Logic.Services
         {
             return $"{_redisKeys.HiveKey}:{hiveId}";
         }
+
+        #region Interference
+        public async Task<Guid> SetInterference(InterferenceModel model)
+        {
+            bool result = await _redisService.SetAsync(GetInterferenceKey(model.Id), model);
+            if (result)
+            {
+                _logger.LogInformation("Successfully added interference: {@model}", model);
+            }
+            else
+            {
+                _logger.LogError("Failed to connect add Interference: {@model}", model);
+                throw new HiveConnectionException("Failed to add interference");
+            }
+
+            return model.Id;
+        }
+
+        public async Task<bool> DeleteInterference(Guid interferenceId)
+        {
+            var result = await _redisService.DeleteAsync(GetInterferenceKey(interferenceId));
+            return result;
+        }
+
+        public async Task NotifyHivesOnDeletedInterference(Guid interferenceId)
+        {
+            var hives = await GetAllHives();
+            var interference = await GetInterferenceModel(interferenceId);
+
+            if (interference is not null)
+            {
+                _logger.LogError("Interference {interferenceId} was not deleted, notification is not feasible", interferenceId);
+                return;
+            }
+
+            if (hives.Count == 0)
+            {
+                _logger.LogInformation("No hives to notify about deleted interference {interferenceId}", interferenceId);
+                return;
+            }
+
+            string hiveMindPath = _communicationControlConfiguration.CurrentValue.HiveMindPath;
+            string[] hiveIds = hives.Select(h => h.HiveID).ToArray();
+            _logger.LogInformation("Notifying {count} hives about deleted interference {interferenceId}: {hiveIds}", hives.Count, interferenceId, hiveIds);
+
+            var notificationTasks = hives.Select(async hive =>
+            {
+                try
+                {
+                    var result = await _hiveHttpClient.NotifyHiveMindAboutDeletedInterference(
+                        hive.HiveSchema, hive.HiveIP, hive.HivePort, hiveMindPath, interferenceId);
+
+                    _logger.LogInformation(
+                        "Successfully notified hive {hiveId} about deleted interference {interferenceId}",
+                        hive.HiveID, interferenceId);
+
+                    return (HiveId: hive.HiveID, Success: true, Error: (Exception)null);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to notify hive {hiveId} about deleted interference {interferenceId}",
+                        hive.HiveID, interferenceId);
+
+                    return (HiveId: hive.HiveID, Success: false, Error: ex);
+                }
+            });
+
+            var results = await Task.WhenAll(notificationTasks);
+
+            var successCount = results.Count(r => r.Success);
+            var failureCount = results.Count(r => !r.Success);
+
+            if (failureCount > 0)
+            {
+                var failedHives = string.Join(", ", results.Where(r => !r.Success).Select(r => r.HiveId));
+                _logger.LogWarning(
+                    "Deleted nterference notification complete for {interferenceId}: {success}/{total} succeeded. Failed hives: {failedHives}",
+                    interferenceId, successCount, hives.Count, failedHives);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Successfully notified all {total} hives about deleted interference {interferenceId}",
+                    hives.Count, interferenceId);
+            }
+        }
+        public async Task NotifyHivesAboutAddedInterference(Guid interferenceId)
+        {
+            var hives = await GetAllHives();
+            var interference = await GetInterferenceModel(interferenceId);
+
+            if (interference == null)
+            {
+                _logger.LogError("Interference {interferenceId} not found for notification", interferenceId);
+                return;
+            }
+
+            if (hives.Count == 0)
+            {
+                _logger.LogInformation("No hives to notify about interference {interferenceId}", interferenceId);
+                return;
+            }
+
+            var command = new SetInterferenceToHiveCommand
+            {
+                Interference = interference
+            };
+
+            string hiveMindPath = _communicationControlConfiguration.CurrentValue.HiveMindPath;
+            string[] hiveIds = hives.Select(h => h.HiveID).ToArray();
+            _logger.LogInformation("Notifying {count} hives about interference {interferenceId}: {hiveIds}", hives.Count, interferenceId, hiveIds);
+
+            var notificationTasks = hives.Select(async hive =>
+            {
+                try
+                {
+                    var result = await _hiveHttpClient.NotifyHiveMindAboutAddedInterference(
+                        hive.HiveSchema, hive.HiveIP, hive.HivePort, hiveMindPath, command);
+                    
+                    _logger.LogInformation(
+                        "Successfully notified hive {hiveId} about interference {interferenceId}", 
+                        hive.HiveID, interferenceId);
+                    
+                    return (HiveId: hive.HiveID, Success: true, Error: (Exception)null);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, 
+                        "Failed to notify hive {hiveId} about interference {interferenceId}", 
+                        hive.HiveID, interferenceId);
+                    
+                    return (HiveId: hive.HiveID, Success: false, Error: ex);
+                }
+            });
+
+            var results = await Task.WhenAll(notificationTasks);
+
+            var successCount = results.Count(r => r.Success);
+            var failureCount = results.Count(r => !r.Success);
+            
+            if (failureCount > 0)
+            {
+                var failedHives = string.Join(", ", results.Where(r => !r.Success).Select(r => r.HiveId));
+                _logger.LogWarning(
+                    "Interference notification complete for {interferenceId}: {success}/{total} succeeded. Failed hives: {failedHives}",
+                    interferenceId, successCount, hives.Count, failedHives);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Successfully notified all {total} hives about interference {interferenceId}",
+                    hives.Count, interferenceId);
+            }
+        }
+
+        private string GetInterferenceKey(Guid interferenceId)
+        {
+            return $"{_redisKeys.InterferenceKey}:{interferenceId.ToString()}";
+        }
+
+        #endregion
     }
 }

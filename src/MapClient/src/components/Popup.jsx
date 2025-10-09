@@ -1,6 +1,6 @@
 import React from "react";
 
-const Popup = ({ isVisible, coords, onConfirm, onCancel }) => {
+const Popup = ({ isVisible, coords, type, interferenceId, onConfirm, onCancel, onPlaceInterference, onRemoveInterference }) => {
     if (!isVisible || !coords) return null;
 
     // Copy coordinates to clipboard
@@ -35,15 +35,45 @@ const Popup = ({ isVisible, coords, onConfirm, onCancel }) => {
                 textAlign: "center",
                 minWidth: "300px"
             }}>
-                <h3>Move all hives to:</h3>
-                <p>Lat: {coords.lat} | Lon: {coords.lon}</p>
+                {type === 'interference' ? (
+                    <>
+                        <h3>Interference Zone</h3>
+                        <p>Lat: {coords.lat} | Lon: {coords.lon}</p>
+                        <p>ID: {interferenceId}</p>
 
-                {/* Copy Coordinates Button */}
-                <button onClick={copyCoordinates} style={{ marginBottom: "10px", display: "block", width: "100%" }}>Copy Coordinates</button>
+                        {/* Copy Coordinates Button */}
+                        <button onClick={copyCoordinates} style={{ marginBottom: "10px", display: "block", width: "100%" }}>Copy Coordinates</button>
 
-                {/* Move Hives & Cancel Buttons */}
-                <button onClick={() => onConfirm(coords)} style={{ marginRight: "10px" }}>Move Hives</button>
-                <button onClick={onCancel}>Cancel</button>
+                        {/* Remove Interference Button */}
+                        <button 
+                            onClick={() => onRemoveInterference(interferenceId)} 
+                            style={{ marginRight: "10px", backgroundColor: "#dc3545", color: "white" }}
+                        >
+                            Remove Interference
+                        </button>
+                        <button onClick={onCancel}>Cancel</button>
+                    </>
+                ) : (
+                    <>
+                        <h3>Move all hives to:</h3>
+                        <p>Lat: {coords.lat} | Lon: {coords.lon}</p>
+
+                        {/* Copy Coordinates Button */}
+                        <button onClick={copyCoordinates} style={{ marginBottom: "10px", display: "block", width: "100%" }}>Copy Coordinates</button>
+
+                        {/* Place Interference Button */}
+                        <button 
+                            onClick={() => onPlaceInterference(coords)} 
+                            style={{ marginBottom: "10px", display: "block", width: "100%", backgroundColor: "#dc3545", color: "white" }}
+                        >
+                            Place Interference
+                        </button>
+
+                        {/* Move Hives & Cancel Buttons */}
+                        <button onClick={() => onConfirm(coords)} style={{ marginRight: "10px" }}>Move Hives</button>
+                        <button onClick={onCancel}>Cancel</button>
+                    </>
+                )}
             </div>
         </div>
     );

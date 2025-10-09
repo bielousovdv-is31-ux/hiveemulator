@@ -31,14 +31,16 @@ namespace DevOpsProject.CommunicationControl.API.Controllers
             };
 
             var hiveOperationalArea = await _communicationControlService.ConnectHive(hiveModel);
+            var interferences = await _communicationControlService.GetAllInterferences();
+
             var connectResponse = new HiveConnectResponse
             {
                 ConnectResult = true,
                 OperationalArea = hiveOperationalArea,
+                Interferences = interferences
             };
 
             return Ok(connectResponse);
-
         }
 
         [HttpPost("telemetry")]
