@@ -30,6 +30,12 @@ namespace DevOpsProject.HiveMind.Logic.Patterns.Factory
                 case HiveMindState.Stop:
                     handler = _serviceProvider.GetService<ICommandHandler<StopHiveMindCommand>>();
                     break;
+                case HiveMindState.SetInterference:
+                    handler = _serviceProvider.GetService<ICommandHandler<AddInterferenceToHiveMindCommand>>();
+                    break;
+                case HiveMindState.DeleteInterference:
+                    handler = _serviceProvider.GetService<ICommandHandler<DeleteInterferenceFromHiveMindCommand>>();
+                    break;
                 default:
                     _logger.LogError("Corresponding handler not found for command: {@command}", command);
                     throw new Exception($"Unsupported command occured, type: {command.CommandType}");

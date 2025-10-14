@@ -5,6 +5,8 @@
         None,
         Stop,
         Move,
-        Error
+        Error,
+        SetInterference,
+        DeleteInterference
     }
 }

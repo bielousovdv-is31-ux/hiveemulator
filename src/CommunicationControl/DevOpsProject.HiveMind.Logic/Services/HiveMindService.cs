@@ -70,6 +70,7 @@ namespace DevOpsProject.HiveMind.Logic.Services
                 {
                     HiveInMemoryState.OperationalArea = hiveConnectResponse.OperationalArea;
                     HiveInMemoryState.CurrentLocation = _communicationConfigurationOptions.InitialLocation;
+                    HiveInMemoryState.Interferences = hiveConnectResponse.Interferences;
 
                     StartTelemetry();
                 }
@@ -85,6 +86,17 @@ namespace DevOpsProject.HiveMind.Logic.Services
                 Environment.Exit(1);
             }
 
+        }
+
+        public bool AddInterference(InterferenceModel interferenceModel)
+        {
+            var isAdded = HiveInMemoryState.AddInterference(interferenceModel);
+            return isAdded;
+        }
+
+        public void RemoveInterference(Guid interferenceId)
+        {
+            HiveInMemoryState.RemoveInterference(interferenceId);
         }
 
         public void StopAllTelemetry()

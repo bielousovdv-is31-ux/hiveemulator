@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: com-control
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: com-control
+  template:
+    metadata:
+      labels:
+        app: com-control
+    spec:
+      containers:
+        - name: com-control
+          image: registry.gitlab.com/kzotkin/hiveemulator/communication-control:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "10m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          env:
+            - name: Redis__ConnectionString
+              value: redis:6379
+            - name: BasePath
+              value: /control
+      imagePullSecrets:
+        - name: gitlab-registry-secret

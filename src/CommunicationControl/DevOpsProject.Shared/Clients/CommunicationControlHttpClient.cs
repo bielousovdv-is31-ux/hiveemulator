@@ -1,4 +1,5 @@
-﻿using DevOpsProject.Shared.Models.HiveMindCommands;
+﻿using DevOpsProject.Shared.Models;
+using DevOpsProject.Shared.Models.HiveMindCommands;
 using System.Text;
 using System.Text.Json;
 

@@ -1,0 +1,37 @@
+stages:
+  - build
+  - docker
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE/communication-control:$CI_COMMIT_SHA
+
+build:
+  stage: build
+  image: mcr.microsoft.com/dotnet/sdk:8.0
+  script:
+    - cd src/CommunicationControl
+    - dotnet publish -c Release -p:PublishProfile=FolderProfile -o ./published DevOpsProject/DevOpsProject.CommunicationControl.API.csproj
+  artifacts:
+    paths:
+      - src/CommunicationControl/published
+
+docker:
+  stage: docker
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - if [ "${CI_COMMIT_REF_NAME}" = "main" ];
+      then
+      export DOCKER_IMAGE_TAG=latest;
+      elif [-v "${CI_COMMIT_TAG}"];
+      then
+      export DOCKER_IMAGE_TAG=["CI_COMMIT_TAG"];
+      else
+      export DOCKER_IMAGE_TAG=${CI_COMMIT_REF_NAME};
+      fi
+    - cd src/CommunicationControl
+    - docker build -t ${CI_REGISTRY}/kzotkin/hiveemulator/communication-control:${DOCKER_IMAGE_TAG} -f  /DevOpsProject/Dockerfile .
+    - docker push $IMAGE_TAG

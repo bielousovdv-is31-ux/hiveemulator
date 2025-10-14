@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: map-client-config
+data:
+  config.json: |
+    {
+      "API": "http://64.225.95.74/control/api/v1/client"
+    }

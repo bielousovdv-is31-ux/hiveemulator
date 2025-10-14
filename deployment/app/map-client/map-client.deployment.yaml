@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: map-client
+  namespace: default
+  labels:
+    app: map-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: map-client
+  template:
+    metadata:
+      labels:
+        app: map-client
+    spec:
+      containers:
+        - name: map-client
+          image: registry.gitlab.com/kzotkin/hiveemulator/map-client:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "10m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          volumeMounts:
+            - name: config-volume
+              mountPath: /usr/share/nginx/html/config.json
+              subPath: config.json
+      volumes:
+        - name: config-volume
+          configMap:
+            name: map-client-config
+      imagePullSecrets:
+        - name: gitlab-registry-secret

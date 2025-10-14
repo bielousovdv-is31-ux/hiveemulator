@@ -5,6 +5,8 @@ using DevOpsProject.HiveMind.API.Middleware;
 using DevOpsProject.HiveMind.Logic.Patterns.Factory.Interfaces;
 using DevOpsProject.HiveMind.Logic.Services.Interfaces;
 using DevOpsProject.Shared.Configuration;
+using DevOpsProject.Shared.Models;
+using Microsoft.AspNetCore.Mvc;
 using DevOpsProject.Shared.Models.HiveMindCommands;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -61,11 +63,8 @@ using (var scope = app.Services.CreateScope())
 app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors(corsPolicyName);
 

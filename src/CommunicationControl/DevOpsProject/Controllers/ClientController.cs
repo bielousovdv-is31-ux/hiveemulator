@@ -50,6 +50,13 @@ namespace DevOpsProject.CommunicationControl.API.Controllers
             return Ok(hives);
         }
 
+        [HttpGet("interferences")]
+        public async Task<IActionResult> GetInterferences()
+        {
+            var interferences = await _communicationControlService.GetAllInterferences();
+            return Ok(interferences);
+        }
+
         [HttpDelete("hive/{hiveId}")]
         public async Task<IActionResult> DisconnectHive(string hiveId)
         {
@@ -81,6 +88,66 @@ namespace DevOpsProject.CommunicationControl.API.Controllers
 
 
             return Accepted("Hives are being moved asynchronously.");
+        }
+
+        [HttpDelete("interference/{id:guid}")]
+        public async Task<IActionResult> DeleteInterference([FromRoute] DeleteInterferenceRequest request)
+        {
+            _logger.LogInformation("DeleteInterference request: {request}", request);
+
+            var interferenceDeleted = await _communicationControlService.DeleteInterference(request.Id);
+            if (!interferenceDeleted)
+            {
+                _logger.LogError("Interference with Id: {id} was not deleted", request.Id);
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _communicationControlService.NotifyHivesOnDeletedInterference(request.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Background notification failed for deleted interference {interferenceId}", request.Id);
+                }
+            });
+
+            return NoContent();
+        } 
+
+        [HttpPost("interference")]
+        public async Task<IActionResult> AddInterferenceArea(AddInterferenceRequest request)
+        {
+            _logger.LogInformation("AddInterferenceArea request: {request}", request);
+
+            if (request == null)
+                return BadRequest("Request body is required");
+
+            if (request.RadiusKM <= 0)
+                return BadRequest("Radius must be greater than 0");
+
+            var addedInterferenceId = await _communicationControlService.SetInterference(new InterferenceModel
+            {
+                Id = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow,
+                Location = request.Location,
+                RadiusKM = request.RadiusKM
+            });
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _communicationControlService.NotifyHivesAboutAddedInterference(addedInterferenceId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Background notification failed for interference {interferenceId}", addedInterferenceId);
+                }
+            });
+
+            return Ok(new { InterferenceId = addedInterferenceId, Message = "Interference added successfully. Hives are being notified." });
         }
 
         [HttpPost("hive/stop")]

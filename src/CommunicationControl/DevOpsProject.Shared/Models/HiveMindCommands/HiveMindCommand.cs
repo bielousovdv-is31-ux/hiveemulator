@@ -7,6 +7,8 @@ namespace DevOpsProject.Shared.Models.HiveMindCommands
     [JsonDerivedType(typeof(HiveMindCommand), nameof(HiveMindState.None))]
     [JsonDerivedType(typeof(MoveHiveMindCommand), nameof(HiveMindState.Move))]
     [JsonDerivedType(typeof(StopHiveMindCommand), nameof(HiveMindState.Stop))]
+    [JsonDerivedType(typeof(SetInterferenceToHiveCommand), nameof(HiveMindState.SetInterference))]
+    [JsonDerivedType(typeof(DeleteInterferenceFromHiveMindCommand), nameof(HiveMindState.DeleteInterference))]
     public class HiveMindCommand
     {
         public HiveMindState CommandType { get; set; }
