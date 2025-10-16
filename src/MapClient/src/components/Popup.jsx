@@ -1,6 +1,7 @@
 import React from "react";
 
-const Popup = ({ isVisible, coords, onConfirm, onCancel, onStopMove }) => {
+const Popup = ({ isVisible, coords, type, interferenceId, onConfirm, onCancel, onPlaceInterference, onRemoveInterference, onStopMove }) => {
+
     if (!isVisible || !coords) return null;
 
     // Copy coordinates to clipboard
@@ -71,6 +72,7 @@ const Popup = ({ isVisible, coords, onConfirm, onCancel, onStopMove }) => {
 
                         {/* Move Hives & Cancel Buttons */}
                         <button onClick={() => onConfirm(coords)} style={{ marginRight: "10px" }}>Move Hives</button>
+                        <button onClick={() => onStopMove()} style={{ marginRight: "10px" }}>Stop Hives</button>
                         <button onClick={onCancel}>Cancel</button>
                     </>
                 )}
