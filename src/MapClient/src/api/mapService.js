@@ -148,4 +148,4 @@ export const stopHiveMove = async (apiUrl, ids) => {
         console.error("Error stopping hive movement:", error);
         throw error;
     }
-}
+};

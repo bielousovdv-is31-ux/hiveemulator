@@ -10,7 +10,7 @@ import { Point, Circle } from "ol/geom";
 import { Feature } from "ol";
 import { Style, Icon, Text, Fill, Stroke } from "ol/style";
 import Popup from "./Popup";
-import { fetchCenterCoordinates, fetchHives, moveHives, fetchInterferences, addInterference, deleteInterference, onStopMove } from "../api/mapService";
+import { fetchCenterCoordinates, fetchHives, moveHives, fetchInterferences, addInterference, deleteInterference, stopHiveMove } from "../api/mapService";
 
 // TEST STAGING
 
@@ -393,9 +393,9 @@ const MapView = () => {
                 type={popup.type}
                 interferenceId={popup.interferenceId}
                 onConfirm={() => moveHives(apiUrl.current, popup.coords.lat, popup.coords.lon, hives.map(h => h.id))} 
-                onCancel={() => setPopup({ visible: false })}
                 onPlaceInterference={handlePlaceInterference}
                 onRemoveInterference={handleRemoveInterference}
+                onCancel={() => setPopup({ visible: false })}
                 onStopMove={() => stopHiveMove(apiUrl.current, hives.map(h => h.id))}
             />
 
