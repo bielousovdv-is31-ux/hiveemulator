@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option csharp_namespace = "DevOpsProject.Shared.Grpc";
+
+package shared;
+
+service DroneService
+{
+  rpc Ping (PingRequest) returns (PingResponse);
+}
+
+message PingRequest
+{
+  
+}
+
+message PingResponse
+{
+  
+}

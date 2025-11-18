@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOpsProject.HiveMind.API"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOpsProject.HiveMind.Logic", "DevOpsProject.HiveMind.Logic\DevOpsProject.HiveMind.Logic.csproj", "{83D3A1EA-64FE-407C-AB3A-A35CC2C9F8EE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOpsProject.Drone.API", "DevOpsProject.Drone.API\DevOpsProject.Drone.API.csproj", "{F41F5F95-3621-4B10-AA06-9E0B20314FE3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevOpsProject.Drone.Logic", "DevOpsProject.Drone.Logic\DevOpsProject.Drone.Logic.csproj", "{F1C071BE-0660-4B0C-A1CA-1DDD18E7D2DC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +49,14 @@ Global
 		{83D3A1EA-64FE-407C-AB3A-A35CC2C9F8EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{83D3A1EA-64FE-407C-AB3A-A35CC2C9F8EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{83D3A1EA-64FE-407C-AB3A-A35CC2C9F8EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F41F5F95-3621-4B10-AA06-9E0B20314FE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F41F5F95-3621-4B10-AA06-9E0B20314FE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F41F5F95-3621-4B10-AA06-9E0B20314FE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F41F5F95-3621-4B10-AA06-9E0B20314FE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1C071BE-0660-4B0C-A1CA-1DDD18E7D2DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1C071BE-0660-4B0C-A1CA-1DDD18E7D2DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1C071BE-0660-4B0C-A1CA-1DDD18E7D2DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1C071BE-0660-4B0C-A1CA-1DDD18E7D2DC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

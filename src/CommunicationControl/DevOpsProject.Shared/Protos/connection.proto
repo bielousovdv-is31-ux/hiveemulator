@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option csharp_namespace = "DevOpsProject.Shared.Grpc";
+
+package shared;
+
+message Connection
+{
+  string name = 1;
+  ConnectionType type = 2;
+  string http1Uri = 3;
+  string grpcUri = 4;
+}
+
+enum ConnectionType
+{
+  ConnectionType_Undefined = 0;
+  ConnectionType_HiveMind = 1;
+  ConnectionType_Drone = 2;
+}

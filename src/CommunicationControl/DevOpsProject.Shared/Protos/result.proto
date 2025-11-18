@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option csharp_namespace = "DevOpsProject.Shared.Grpc";
+
+package shared;
+
+message Result
+{
+  bool isSuccess = 1;
+  ErrorType errorType = 2;
+}
+
+enum ErrorType
+{
+  ErrorType_Undefined = 0;
+  ErrorType_NetworkFailure = 1;
+  ErrorType_AlreadyExists = 2;
+  ErrorType_NotFound = 3;
+}
