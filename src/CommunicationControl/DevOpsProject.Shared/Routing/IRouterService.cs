@@ -14,6 +14,6 @@ public interface IRouterService
     bool TryUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
     bool TryRemoveConnection(string connectionName);
     bool IsRecalculationNeeded();
-    void RecalculateHops(string currentConnectionName);
+    void RecalculateHops();
     Connection GetHiveMindConnection();
 }

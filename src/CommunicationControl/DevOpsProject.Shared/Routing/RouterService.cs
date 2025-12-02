@@ -14,8 +14,11 @@ public sealed class RouterService : IRouterService
     
     private Dictionary<string, Connection> _nextHops = new();
 
+    private readonly RouterServiceOptions _options;
+
     public RouterService(IOptions<RouterServiceOptions> options)
     {
+        _options = options.Value;
         TryAddConnection(options.Value.CurrentConnection, []);
     }
 
@@ -132,6 +135,11 @@ public sealed class RouterService : IRouterService
             var added = _connections.TryAdd(connection.Name, connection);
             _connectedDevices.TryAdd(connection.Name, connectedDevicesNames.ToHashSet());
 
+            if (connection.Name != _options.CurrentConnection.Name)
+            {
+                _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);
+            }
+
             return added;
         }
         finally
@@ -212,9 +220,9 @@ public sealed class RouterService : IRouterService
         }
     }
     
-    public void RecalculateHops(string currentConnectionName)
+    public void RecalculateHops()
     {
-        ArgumentNullException.ThrowIfNull(currentConnectionName);
+        var currentConnectionName = _options.CurrentConnection.Name;
         
         _rwLock.EnterWriteLock();
 
@@ -243,7 +251,7 @@ public sealed class RouterService : IRouterService
 
             if (hiveMindIsConnected && !currentConnectionIsHiveMind)
             {
-                if (_connectedDevices[currentConnectionName].Contains(hiveMind.Name))
+                if (_connectedDevices[currentConnectionName!].Contains(hiveMind.Name))
                 {
                     _nextHops[hiveMind.Name] = hiveMind;
                 }

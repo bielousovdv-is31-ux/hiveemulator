@@ -18,7 +18,7 @@ public sealed class RouterUpdaterBackgroundService(ILogger<RouterUpdaterBackgrou
 
                 if (routerService.IsRecalculationNeeded())
                 {
-                    routerService.RecalculateHops(options.Value.CurrentConnection.Name);
+                    routerService.RecalculateHops();
                 }
             }
             catch (Exception ex)
