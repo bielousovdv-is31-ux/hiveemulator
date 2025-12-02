@@ -26,6 +26,11 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
         }
         
         var destinationConnection = routerService.GetNextHop(destination);
+        if (destinationConnection == null)
+        {
+            throw new InvalidOperationException($"Destination {destination} is not reachable from this drone.");
+        }
+        
         var channel = grpcChannelFactory.Create(destinationConnection.GrpcUri);
         var invoker = channel.CreateCallInvoker();
         

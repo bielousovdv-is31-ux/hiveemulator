@@ -4,5 +4,6 @@ namespace DevOpsProject.Drone.Logic.Services;
 
 public sealed class DroneService : IDroneService
 {
-    
+    // TODO: Move()
+    // TODO: StopMoving()
 }
