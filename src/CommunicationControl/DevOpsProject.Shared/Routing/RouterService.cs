@@ -19,7 +19,7 @@ public sealed class RouterService : IRouterService
     public RouterService(IOptions<RouterServiceOptions> options)
     {
         _options = options.Value;
-        TryAddConnection(options.Value.CurrentConnection, []);
+        AddOrUpdateConnection(options.Value.CurrentConnection, []);
     }
 
     public Connection GetNextHop(string name)
@@ -138,7 +138,7 @@ public sealed class RouterService : IRouterService
         }
     }
 
-    public bool TryAddConnection(Connection connection, IEnumerable<string> connectedDevicesNames)
+    public void AddOrUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames)
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(connectedDevicesNames);
@@ -146,15 +146,13 @@ public sealed class RouterService : IRouterService
         _rwLock.EnterWriteLock();
         try
         {
-            var added = _connections.TryAdd(connection.Name, connection);
-            _connectedDevices.TryAdd(connection.Name, connectedDevicesNames.ToHashSet());
+            _connections[connection.Name] = connection;
+            _connectedDevices[connection.Name] = connectedDevicesNames.ToHashSet();
 
             if (connection.Name != _options.CurrentConnection.Name && connection.State == ConnectionState.Alive)
             {
-                _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);
+                _ = _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);
             }
-
-            return added;
         }
         finally
         {

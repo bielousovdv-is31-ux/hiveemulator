@@ -8,4 +8,6 @@ public interface IDroneTelemetryService
     bool Remove(string droneId);
     void LogTelemetry();
     DroneTelemetryModel GetTelemetryModel(string droneId);
+    void UpdateHiveMindLocation();
+    void Update(DroneTelemetryModel model);
 }

@@ -73,6 +73,7 @@ builder.Services.AddResiliencePipeline("grpc-retry", (pipelineBuilder, context) 
     });
 });
 builder.Services.AddSingleton<ResilienceInterceptor>();
+builder.Services.AddSingleton<LogHandleExceptionInterceptor>();
 
 builder.Services.AddRouterService((opt, sp) =>
 {

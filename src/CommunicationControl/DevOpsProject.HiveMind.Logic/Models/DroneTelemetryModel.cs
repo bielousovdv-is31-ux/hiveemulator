@@ -3,14 +3,13 @@ using DevOpsProject.Shared.Models;
 
 namespace DevOpsProject.HiveMind.Logic.Models;
 
-public sealed record DroneTelemetryModel
-{
-    public string Id { get; set; }
-    public Location Location { get; set; }
-    public float Speed { get; set; }
-    public float Height { get; set; }
-    public DroneType DroneType { get; set; }
-    public DateTimeOffset LastUpdatedAt { get; set; }
-    public DroneState State { get; set; }
-    public Location? Destination { get; set; }
-}
+public sealed record DroneTelemetryModel(
+    string Id,
+    Location? Location,
+    float Speed,
+    float Height,
+    DroneType DroneType,
+    DateTimeOffset LastUpdatedAt,
+    DroneState State,
+    Location? Destination
+);

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using System.Text.Json;
+using DevOpsProject.HiveMind.Logic.Exceptions;
 
 namespace DevOpsProject.HiveMind.API.Middleware
 {
@@ -16,17 +17,27 @@ namespace DevOpsProject.HiveMind.API.Middleware
 
         public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
         {
-            _logger.LogError(exception, "Unhandled exception occured: {Message}", exception.Message);
-
-            httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            var (statusCode, message, details) = exception switch
+            {
+                DroneRequestFailedException => (StatusCodes.Status400BadRequest, exception.Message, null),
+                _ => (StatusCodes.Status500InternalServerError, "Unexpected error occured",
+                    _hostEnvironment.IsDevelopment() ? exception.ToString() : null)
+            };
+            
+            httpContext.Response.StatusCode = statusCode;
             httpContext.Response.ContentType = "application/json";
 
             var errorResponse = new
             {
-                Message = "Unexpected error occured",
-                Detail = _hostEnvironment.IsDevelopment() ? exception.ToString() : null
+                Message = message,
+                Detail = details
             };
 
+            if (httpContext.Response.StatusCode == StatusCodes.Status500InternalServerError)
+            {
+                _logger.LogError(exception, "Unhandled exception occured: {Message}", exception.Message);
+            }
+            
             var jsonResponse = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions { WriteIndented = true });
             await httpContext.Response.WriteAsync(jsonResponse, cancellationToken);
             return true;

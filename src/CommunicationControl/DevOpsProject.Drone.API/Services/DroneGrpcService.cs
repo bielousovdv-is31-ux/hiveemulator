@@ -27,14 +27,20 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
             });
         }
         
-        var added = routerService.TryAddConnection(
+        routerService.AddOrUpdateConnection(
             new Connection(request.Id, ConnectionType.Hive, request.IpAddress, request.Http1Port, request.GrpcPort, request.UdpPort, request.Timestamp.ToDateTimeOffset()),
             request.AliveConnectionNames);
+        foreach (var drone in request.Drones)
+        {
+            routerService.AddOrUpdateConnection(
+                new Connection(drone.Id, ConnectionType.Drone, drone.IpAddress, drone.Http1Port, drone.GrpcPort, drone.UdpPort, drone.Timestamp.ToDateTimeOffset()),
+                drone.AliveConnectionNames);
+        }
         return Task.FromResult(new ConnectHiveResponse()
         {
             Result = new Result()
             {
-                IsSuccess = added
+                IsSuccess = true
             }
         });
     }
@@ -65,15 +71,14 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
 
     public override Task<ConnectDroneResponse> ConnectDrone(ConnectDroneRequest request, ServerCallContext context)
     {
-        var added = routerService.TryAddConnection(
+        routerService.AddOrUpdateConnection(
             new Connection(request.Id, ConnectionType.Drone, request.IpAddress, request.Http1Port, request.GrpcPort, request.UdpPort, request.Timestamp.ToDateTimeOffset()),
             request.AliveConnectionNames);
         return Task.FromResult(new ConnectDroneResponse()
         {
             Result = new Result()
             {
-                IsSuccess = added,
-                Error = added ? null : "This drone is already connected"
+                IsSuccess = true
             }
         });
     }
@@ -96,6 +101,7 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
     {
         var connection = routerService.GetConnectionOrNull(droneState.Name)
                          ?? throw new InvalidOperationException($"Drone connection '{droneState.Name}' does not exist");
+        var currentState = (IDroneState)droneState.Clone();
         
         return Task.FromResult(new PingResponse()
         {
@@ -105,7 +111,23 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
             GrpcPort = connection.GrpcPort,
             Http1Port = connection.Http1Port,
             UdpPort = connection.UdpPort,
-            Timestamp = DateTimeOffset.UtcNow.ToTimestamp()
+            Timestamp = DateTimeOffset.UtcNow.ToTimestamp(),
+            DroneType = (DevOpsProject.Shared.Grpc.DroneType) currentState.Type,
+            State = (DevOpsProject.Shared.Grpc.DroneState) currentState.State,
+            Location = new DevOpsProject.Shared.Grpc.Location()
+            {
+                Latitude = currentState.Location.Latitude,
+                Longitude = currentState.Location.Longitude,
+            },
+            Speed = currentState.Speed,
+            Height = currentState.Height,
+            Destination = currentState.Destination != null 
+                ? new DevOpsProject.Shared.Grpc.Location()
+                {
+                    Latitude = currentState.Destination.Value.Latitude,
+                    Longitude = currentState.Destination.Value.Longitude,
+                }
+                : null
         });
     }
 

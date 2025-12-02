@@ -7,6 +7,7 @@ package shared;
 import "network-status.proto";
 import "result.proto";
 import "location.proto";
+import "drone-telemetry.proto";
 import "google/protobuf/timestamp.proto";
 
 service DroneService
@@ -36,6 +37,12 @@ message PingResponse
   int32 grpcPort = 5;
   int32 udpPort = 6;
   google.protobuf.Timestamp timestamp = 7;
+  Location location = 8;
+  float speed = 9;
+  float height = 10;
+  DroneType droneType = 11;
+  DroneState state = 12;
+  Location destination = 13;
 }
 
 message ConnectDroneRequest
@@ -113,6 +120,7 @@ message ConnectHiveRequest
   int32 udpPort = 5;
   repeated string aliveConnectionNames = 6;
   google.protobuf.Timestamp timestamp = 7;
+  repeated ConnectDroneRequest drones = 8;
 }
 
 message ConnectHiveResponse

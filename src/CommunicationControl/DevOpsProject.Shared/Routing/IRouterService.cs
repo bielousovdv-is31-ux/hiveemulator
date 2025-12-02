@@ -10,7 +10,7 @@ public interface IRouterService
     ISet<string> GetConnectedDevicesNames(string name);
     IReadOnlyList<Connection> GetConnections(bool includeCurrent = false);
     void UpdateConnectionForEach(Action<Connection> action);
-    bool TryAddConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
+    void AddOrUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
     bool TryUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
     bool TryRemoveConnection(string connectionName);
     bool IsRecalculationNeeded();
