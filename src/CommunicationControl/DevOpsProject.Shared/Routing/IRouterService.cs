@@ -8,7 +8,7 @@ public interface IRouterService
     Connection GetConnectionOrNull(string name);
     bool IsHiveMindConnected();
     ISet<string> GetConnectedDevicesNames(string name);
-    IReadOnlyList<Connection> GetConnections();
+    IReadOnlyList<Connection> GetConnections(bool includeCurrent = false);
     void WithReadLockedForEach(Action<Connection> action);
     bool TryAddConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
     bool TryUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames);

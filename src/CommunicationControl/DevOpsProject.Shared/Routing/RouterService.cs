@@ -93,11 +93,16 @@ public sealed class RouterService : IRouterService
         }
     }
 
-    public IReadOnlyList<Connection> GetConnections()
+    public IReadOnlyList<Connection> GetConnections(bool includeCurrent)
     {
         _rwLock.EnterReadLock();
         try
         {
+            if (!includeCurrent)
+            {
+                return _connections.Values.Where(c => c.Name != _options.CurrentConnection.Name).ToList();
+            }
+            
             return _connections.Values.ToList();
         }
         finally
