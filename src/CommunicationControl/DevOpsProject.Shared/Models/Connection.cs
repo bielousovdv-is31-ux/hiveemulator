@@ -8,9 +8,9 @@ public sealed class Connection
     public string DeviceId { get; }
     public ConnectionType Type { get; }
     public string IpAddress { get; set; }
-    public int Http1Port { get; }
-    public int GrpcPort { get; }
-    public int UdpPort { get; }
+    public int Http1Port { get; set; }
+    public int GrpcPort { get; set; }
+    public int UdpPort { get; set; }
     public ConnectionState State { get; set; } = ConnectionState.Alive;
     public DateTimeOffset LastUpdatedAt { get; set; }
     public DateTimeOffset PreviousLastUpdatedAt { get; set; }

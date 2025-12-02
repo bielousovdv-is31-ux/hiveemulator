@@ -11,10 +11,24 @@ public sealed class NetworkStatusHandler(IRouterService routerService) : IUdpMes
     public Task HandleAsync(NetworkStatus message, CancellationToken token)
     {
         var previousConnection = routerService.GetConnectionOrNull(Connection.GetName(message.Id, (ConnectionType) message.Type));
-        var connection = new Connection(message.Id, (ConnectionType) message.Type, message.IpAddress, message.Http1Port, message.GrpcPort, message.UdpPort, message.SentAt.ToDateTimeOffset())
+        Connection connection;
+        if (previousConnection != null)
+        {
+            connection = previousConnection;
+            previousConnection.IpAddress = message.IpAddress;
+            previousConnection.Http1Port = message.Http1Port;
+            previousConnection.GrpcPort = message.GrpcPort;
+            previousConnection.UdpPort = message.UdpPort;
+            previousConnection.PreviousLastUpdatedAt = previousConnection.LastUpdatedAt;
+            previousConnection.LastUpdatedAt = message.SentAt.ToDateTimeOffset();
+        }
+        else
+        {
+            connection = new Connection(message.Id, (ConnectionType) message.Type, message.IpAddress, message.Http1Port, message.GrpcPort, message.UdpPort, message.SentAt.ToDateTimeOffset())
             {
-                PreviousLastUpdatedAt = previousConnection?.LastUpdatedAt ?? message.SentAt.ToDateTimeOffset()
+                PreviousLastUpdatedAt = message.SentAt.ToDateTimeOffset()
             };
+        }
         _ = routerService.TryUpdateConnection(connection, message.AliveConnectionNames.ToHashSet());
         
         return Task.CompletedTask;

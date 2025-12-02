@@ -1,4 +1,5 @@
 ﻿using DevOpsProject.Drone.Logic.State;
+using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Routing;
@@ -103,6 +104,31 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
             Http1Port = connection.Http1Port,
             UdpPort = connection.UdpPort,
             Timestamp = DateTimeOffset.UtcNow.ToTimestamp()
+        });
+    }
+
+    public override Task<SimulateDeadConnectionResponse> SimulateDeadConnection(SimulateDeadConnectionRequest request, ServerCallContext context)
+    {
+        var connection = routerService.GetConnectionOrNull(request.ConnectionName);
+        if (connection == null)
+        {
+            return Task.FromResult(new SimulateDeadConnectionResponse()
+            {
+                Result = new Result()
+                {
+                    Error = $"Drone connection '{droneState.Name}' does not exist"
+                }
+            });
+        }
+
+        connection.State = ConnectionState.DeadNonRecoverable;
+
+        return Task.FromResult(new SimulateDeadConnectionResponse()
+        {
+            Result = new Result()
+            {
+                IsSuccess = true
+            }
         });
     }
 }

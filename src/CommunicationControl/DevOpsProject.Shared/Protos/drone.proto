@@ -75,8 +75,7 @@ message MoveResponse
 
 message SimulateDeadConnectionRequest
 {
-  string connectionName1 = 1;
-  string connectionName2 = 2;
+  string connectionName = 1;
 }
 
 message SimulateDeadConnectionResponse
@@ -86,8 +85,7 @@ message SimulateDeadConnectionResponse
 
 message StopDeadConnectionSimulationRequest
 {
-  string connectionName1 = 1;
-  string connectionName2 = 2;
+  string connectionName = 1;
 }
 
 message StopDeadConnectionSimulationResponse
