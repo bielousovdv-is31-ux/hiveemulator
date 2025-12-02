@@ -10,13 +10,13 @@ public class IsAliveConnectionChecker(ILogger<IsAliveConnectionChecker> logger, 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("IsAliveConnectionChecker started");
-        var maxDifference = TimeSpan.FromMilliseconds(options.Value.IsAliveCheckerMaxDifferenceInMilliseconds);
+        var maxDifference = options.Value.IsAliveCheckerMaxDifference;
         
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(options.Value.IsAliveCheckerDelayInMilliseconds, stoppingToken);
+                await Task.Delay(options.Value.IsAliveCheckerDelay, stoppingToken);
                 
                 routerService.WithReadLockedForEach(connection =>
                 {

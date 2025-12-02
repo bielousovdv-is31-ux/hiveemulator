@@ -19,9 +19,9 @@ builder.Services.AddGrpc(opt =>
 builder.Services.AddGrpcClientFactory();
 builder.Services.AddRouterService((opt, sp) =>
 {
-    opt.RouterUpdatedDelayInMilliseconds = builder.Configuration.GetValue<int>("RouterServiceOptions:RouterUpdatedDelayInMilliseconds");
-    opt.IsAliveCheckerDelayInMilliseconds = builder.Configuration.GetValue<int>("RouterServiceOptions:IsAliveCheckerDelayInMilliseconds");
-    opt.IsAliveCheckerMaxDifferenceInMilliseconds = builder.Configuration.GetValue<int>("RouterServiceOptions:IsAliveCheckerMaxDifferenceInMilliseconds");
+    opt.RouterUpdatedDelay = builder.Configuration.GetValue<TimeSpan>("RouterServiceOptions:RouterUpdatedDelay");
+    opt.IsAliveCheckerDelay = builder.Configuration.GetValue<TimeSpan>("RouterServiceOptions:IsAliveCheckerDelay");
+    opt.IsAliveCheckerMaxDifference = builder.Configuration.GetValue<TimeSpan>("RouterServiceOptions:IsAliveCheckerMaxDifference");
     opt.CurrentConnectionNameProvider = () =>
         Connection.GetName(sp.GetRequiredService<IDroneState>().DroneId, ConnectionType.Drone);
 });

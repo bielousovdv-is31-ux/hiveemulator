@@ -19,7 +19,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
         {
             try
             {
-                await Task.Delay(options.Value.DelayInMilliseconds, stoppingToken);
+                await Task.Delay(options.Value.Delay, stoppingToken);
 
                 var connection = routerService.GetConnectionOrNull(droneState.Name)
                                  ?? throw new InvalidOperationException($"Drone connection '{droneState.Name}' does not exist");
