@@ -18,7 +18,7 @@ public class IsAliveConnectionChecker(ILogger<IsAliveConnectionChecker> logger, 
             {
                 await Task.Delay(options.Value.IsAliveCheckerDelay, stoppingToken);
                 
-                routerService.WithReadLockedForEach(connection =>
+                routerService.UpdateConnectionForEach(connection =>
                 {
                     if (connection.State == ConnectionState.DeadNonRecoverable
                         || connection == options.Value.CurrentConnection)
@@ -29,7 +29,6 @@ public class IsAliveConnectionChecker(ILogger<IsAliveConnectionChecker> logger, 
                     var difference = connection.LastUpdatedAt - connection.PreviousLastUpdatedAt;
                     connection.State = difference > maxDifference ? ConnectionState.Dead : ConnectionState.Alive;
                 });
-                routerService.UpdateCurrentConnectionConnectedDevices();
             }
             catch (Exception ex)
             {

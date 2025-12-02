@@ -111,35 +111,26 @@ public sealed class RouterService : IRouterService
         }
     }
 
-    public void WithReadLockedForEach(Action<Connection> action)
+    public void UpdateConnectionForEach(Action<Connection> action)
     {
         ArgumentNullException.ThrowIfNull(action);
         
-        _rwLock.EnterReadLock();
+        _rwLock.EnterWriteLock();
         try
         {
             foreach (var connection in _connections.Values)
             {
                 action(connection);
+
+                if (connection.State == ConnectionState.Alive)
+                {
+                    _ = _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);
+                }
+                else
+                {
+                    _ = _connectedDevices[_options.CurrentConnection.Name].Remove(connection.Name);
+                }
             }
-        }
-        finally
-        {
-            _rwLock.ExitReadLock();
-        }
-    }
-
-    public void UpdateCurrentConnectionConnectedDevices()
-    {
-        _rwLock.EnterWriteLock();
-
-        try
-        {
-            _connectedDevices[_options.CurrentConnection.Name] = _connections
-                .Select(c => c.Value)
-                .Where(c => c.State == ConnectionState.Alive)
-                .Select(c => c.Name)
-                .ToHashSet();
         }
         finally
         {

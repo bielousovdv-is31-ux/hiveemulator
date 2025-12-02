@@ -9,12 +9,11 @@ public interface IRouterService
     bool IsHiveMindConnected();
     ISet<string> GetConnectedDevicesNames(string name);
     IReadOnlyList<Connection> GetConnections(bool includeCurrent = false);
-    void WithReadLockedForEach(Action<Connection> action);
+    void UpdateConnectionForEach(Action<Connection> action);
     bool TryAddConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
     bool TryUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
     bool TryRemoveConnection(string connectionName);
     bool IsRecalculationNeeded();
     void RecalculateHops();
     Connection GetHiveMindConnection();
-    void UpdateCurrentConnectionConnectedDevices();
 }
