@@ -9,6 +9,7 @@ using DevOpsProject.Shared.Routing;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
+using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
@@ -98,6 +99,13 @@ public sealed class DroneService(
             })
             .ToList();
 
+        await ConnectHiveToDroneAsync(hiveConnection, connectDronesRequests, channel);
+
+        await ConnectDroneToDronesAsync(connectDronesRequests);
+    }
+
+    private async Task ConnectHiveToDroneAsync(Connection hiveConnection, List<(Connection connection, ConnectDroneRequest request)> connectDronesRequests, GrpcChannel channel)
+    {
         var request = new ConnectHiveRequest()
         {
             Id = communicationConfigurationOptions.Value.HiveID,
@@ -110,14 +118,18 @@ public sealed class DroneService(
         };
         request.AliveConnectionNames.AddRange(routerService.GetConnectedDevicesNames(hiveConnection.Name));
         request.Drones.AddRange(connectDronesRequests.Select(r => r.request));
-        callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
-        client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
+        
+        var callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
+        var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
         var connectionResult = await client.ConnectHiveAsync(request);
         if (!connectionResult.Result.IsSuccess)
         {
             throw new DroneRequestFailedException(connectionResult.Result.Error);
         }
-
+    }
+    
+    private async Task ConnectDroneToDronesAsync(List<(Connection connection, ConnectDroneRequest request)> connectDronesRequests)
+    {
         var tasks = connectDronesRequests
             .Select(async item =>
             {
@@ -125,7 +137,7 @@ public sealed class DroneService(
                 var nextHop = routerService.GetNextHop(droneConnection.Name);
                 if (nextHop == null)
                 {
-                    logger.LogError("Drone '{DroneConnectionName}' has is unreachable.", droneConnection.Name);
+                    logger.LogError("Drone '{DroneConnectionName}' is unreachable.", droneConnection.Name);
                     return;
                 }
                 
