@@ -131,4 +131,40 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
             }
         });
     }
+
+    public override Task<StopDeadConnectionSimulationResponse> StopDeadConnectionSimulation(StopDeadConnectionSimulationRequest request, ServerCallContext context)
+    {
+        var connection = routerService.GetConnectionOrNull(request.ConnectionName);
+        if (connection == null)
+        {
+            return Task.FromResult(new StopDeadConnectionSimulationResponse()
+            {
+                Result = new Result()
+                {
+                    Error = $"Drone connection '{droneState.Name}' does not exist"
+                }
+            });
+        }
+
+        if (connection.State != ConnectionState.DeadNonRecoverable)
+        {
+            return Task.FromResult(new StopDeadConnectionSimulationResponse()
+            {
+                Result = new Result()
+                {
+                    Error = $"Drone connection '{droneState.Name}' does not undergo any simulations."
+                }
+            });
+        }
+
+        connection.State = ConnectionState.Dead;
+
+        return Task.FromResult(new StopDeadConnectionSimulationResponse()
+        {
+            Result = new Result()
+            {
+                IsSuccess = true
+            }
+        });
+    }
 }
