@@ -157,7 +157,7 @@ public sealed class RouterService : IRouterService
             if (connection.Name != _options.CurrentConnection.Name && connection.State == ConnectionState.Alive)
             {
                 _ = _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);
-                _nextHops[connection.Name] = _options.CurrentConnection;
+                _nextHops[connection.Name] = connection;
             }
         }
         finally

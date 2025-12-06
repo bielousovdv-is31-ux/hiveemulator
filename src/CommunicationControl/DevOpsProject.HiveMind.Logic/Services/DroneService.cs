@@ -94,7 +94,7 @@ public sealed class DroneService(
                     UdpPort = c.UdpPort,
                     Timestamp = DateTimeOffset.UtcNow.ToTimestamp()
                 };
-                request.AliveConnectionNames.AddRange(routerService.GetConnectedDevicesNames(c.DeviceId));
+                request.AliveConnectionNames.AddRange(routerService.GetConnectedDevicesNames(c.Name));
                 return request;
             })
             .ToList();
