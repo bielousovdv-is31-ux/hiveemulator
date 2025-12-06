@@ -9,7 +9,7 @@
         SetInterference,
         DeleteInterference,
         AddDrone,
-        RemoveDrone,
+        DeleteDrone,
         SimulateDeadConnection,
         StopDeadConnectionSimulation,
     }

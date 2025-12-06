@@ -55,65 +55,8 @@ builder.Services.AddCorsConfiguration(corsPolicyName);
 builder.Services.AddExceptionHandler<ExceptionHandlingMiddleware>();
 builder.Services.AddProblemDetails();
 
-builder.Services.AddGrpcClientFactory();
-builder.Services.AddResiliencePipeline("grpc-retry", (pipelineBuilder, context) =>
-{
-    pipelineBuilder.AddRetry(new RetryStrategyOptions
-    {
-        ShouldHandle = new PredicateBuilder()
-            .Handle<RpcException>(ex =>
-                ex.StatusCode == StatusCode.Unavailable ||
-                ex.StatusCode == StatusCode.Aborted ||
-                ex.StatusCode == StatusCode.ResourceExhausted),
-        
-        MaxRetryAttempts = 3,
-        Delay = TimeSpan.FromMilliseconds(200),
-        BackoffType = DelayBackoffType.Exponential,
-        UseJitter = true
-    });
-});
-builder.Services.AddSingleton<ResilienceInterceptor>();
-builder.Services.AddSingleton<LogHandleExceptionInterceptor>();
-
-builder.Services.AddRouterService((opt, sp) =>
-{
-    opt.RouterUpdaterDelay = builder.Configuration.GetValue<TimeSpan>("RouterServiceOptions:RouterUpdatedDelay");
-    opt.IsAliveCheckerDelay = builder.Configuration.GetValue<TimeSpan>("RouterServiceOptions:IsAliveCheckerDelay");
-    opt.IsAliveCheckerMaxDifference = builder.Configuration.GetValue<TimeSpan>("RouterServiceOptions:IsAliveCheckerMaxDifference");
-    
-    var currentUri = new Uri((builder.Configuration["urls"]
-                              ?? builder.Configuration["ASPNETCORE_URLS"]!).Split(';', StringSplitOptions.RemoveEmptyEntries)[0]);
-    var httpGrpcPort = currentUri.Port;
-    var udpPort = ushort.Parse(Environment.GetEnvironmentVariable("UDP_PORT")!);
-    var ipAddress = Environment.GetEnvironmentVariable("IP_ADDRESS");
-    if (string.IsNullOrEmpty(ipAddress) || !IPAddress.TryParse(ipAddress, out _))
-    {
-        throw new InvalidOperationException("Provide a valid IP_ADDRESS");
-    }
-    opt.CurrentConnection = new Connection(
-        sp.GetRequiredService<IOptions<HiveCommunicationConfig>>().Value.HiveID,
-        ConnectionType.Hive,
-        ipAddress,
-        httpGrpcPort,
-        httpGrpcPort,
-        udpPort,
-        DateTimeOffset.UtcNow);
-});
-
-builder.Services.AddOptions<NetworkStatusPublisherOptions>()
-    .BindConfiguration("NetworkStatusPublisherOptions")
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-builder.Services.AddHostedService<NetworkStatusPublisher>();
-
-builder.Services.AddUdpMessageHandler<DroneTelemetry, DroneTelemetryHandler>();
-builder.Services.AddSingleton<IDroneTelemetryService, DroneTelemetryService>();
-builder.Services.AddSingleton<IDroneService, DevOpsProject.HiveMind.Logic.Services.DroneService>();
-builder.Services.AddHostedService<DronesTelemetryLogger>();
-builder.Services.AddOptions<DronesTelemetryLoggerOptions>()
-    .BindConfiguration("DronesTelemetryLoggerOptions")
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
+builder.Services.AddGrpcServices();
+builder.Services.AddMeshNetworkConfiguration(builder.Configuration);
 
 var app = builder.Build();
 

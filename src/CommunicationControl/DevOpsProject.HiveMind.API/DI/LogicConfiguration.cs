@@ -16,10 +16,14 @@ namespace DevOpsProject.HiveMind.API.DI
             serviceCollection.AddTransient<ICommandHandler<StopHiveMindCommand>, StopHiveMindCommandHandler>();
             serviceCollection.AddTransient<ICommandHandler<AddInterferenceToHiveMindCommand>, AddInterferenceToHiveMindCommandHandler>();
             serviceCollection.AddTransient<ICommandHandler<DeleteInterferenceFromHiveMindCommand>, DeleteInterferenceFromHiveMindCommandHandler>();
+            serviceCollection.AddTransient<ICommandHandler<AddDroneCommand>, AddDroneCommandHandler>();
             serviceCollection.AddTransient<ICommandHandlerFactory, CommandHandlerFactory>();
 
             serviceCollection.AddTransient<IHiveMindService, HiveMindService>();
             serviceCollection.AddTransient<IHiveMindMovingService, HiveMindMovingService>();
+            
+            serviceCollection.AddSingleton<IDroneTelemetryService, DroneTelemetryService>();
+            serviceCollection.AddSingleton<IDroneService, DroneService>();
 
             return serviceCollection;
         }

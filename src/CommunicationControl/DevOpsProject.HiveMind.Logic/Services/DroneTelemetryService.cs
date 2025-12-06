@@ -15,7 +15,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
 {
     private readonly ConcurrentDictionary<string, DroneTelemetryModel> _drones = new();
 
-    public bool Add(DroneTelemetryModel model)
+    public bool TryAdd(DroneTelemetryModel model)
     {
         return _drones.TryAdd(model.Id, model);
     }
@@ -46,7 +46,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
         };
     }
     
-    public bool Remove(string droneId)
+    public bool TryRemove(string droneId)
     {
         return _drones.TryRemove(droneId, out _);
     }

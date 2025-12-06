@@ -10,7 +10,7 @@ namespace DevOpsProject.Shared.Models.HiveMindCommands
     [JsonDerivedType(typeof(AddInterferenceToHiveMindCommand), nameof(HiveMindState.SetInterference))]
     [JsonDerivedType(typeof(DeleteInterferenceFromHiveMindCommand), nameof(HiveMindState.DeleteInterference))]
     [JsonDerivedType(typeof(AddDroneCommand), nameof(HiveMindState.AddDrone))]
-    [JsonDerivedType(typeof(RemoveDroneCommand), nameof(HiveMindState.RemoveDrone))]
+    [JsonDerivedType(typeof(DeleteDroneCommand), nameof(HiveMindState.DeleteDrone))]
     [JsonDerivedType(typeof(SimulateDeadConnectionCommand), nameof(HiveMindState.SimulateDeadConnection))]
     [JsonDerivedType(typeof(StopDeadConnectionSimulationCommand), nameof(HiveMindState.StopDeadConnectionSimulation))]
     public class HiveMindCommand

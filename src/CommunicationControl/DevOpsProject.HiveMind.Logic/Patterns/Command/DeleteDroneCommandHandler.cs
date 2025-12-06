@@ -4,10 +4,10 @@ using DevOpsProject.Shared.Models.HiveMindCommands;
 
 namespace DevOpsProject.HiveMind.Logic.Patterns.Command;
 
-public sealed class AddDroneCommandHandler(IDroneService droneService) : ICommandHandler<AddDroneCommand>
+public sealed class DeleteDroneCommandHandler(IDroneService droneService) : ICommandHandler<DeleteDroneCommand>
 {
-    public async Task HandleAsync(AddDroneCommand command)
+    public async Task HandleAsync(DeleteDroneCommand command)
     {
-        await droneService.ConnectDroneAsync(command.IpAddress, command.GrpcPort);
+        await droneService.DisconnectDroneAsync(command.DroneId);
     }
 }

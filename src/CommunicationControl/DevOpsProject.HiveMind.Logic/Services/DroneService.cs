@@ -54,7 +54,7 @@ public sealed class DroneService(
             pingResponse.UdpPort,
             pingResponse.Timestamp.ToDateTimeOffset());
         routerService.AddOrUpdateConnection(connection, []);
-        droneTelemetryService.Add(new DroneTelemetryModel(
+        _ = droneTelemetryService.TryAdd(new DroneTelemetryModel(
             pingResponse.Id,
             pingResponse.Location != null
                 ? new Location()
@@ -159,6 +159,87 @@ public sealed class DroneService(
                 if (!result.Result.IsSuccess)
                 {
                     logger.LogError("Drone '{DroneConnectionName}' failed to connect.", droneConnection.Name);
+                }
+            });
+        await Task.WhenAll(tasks);
+    }
+
+    public async Task DisconnectDroneAsync(string droneId)
+    {
+        var droneConnection = routerService.GetConnectionOrNull(Connection.GetName(droneId, ConnectionType.Drone));
+        if (droneConnection == null)
+        {
+            throw new DroneRequestFailedException("Drone not found.");
+        }
+        
+        var connections = routerService.GetConnections();
+        var connectionsToSend = connections
+            .Where(c => c.Type != ConnectionType.Hive && c.Name != droneConnection.Name)
+            .ToList();
+        
+        await DisconnectHiveFromDroneAsync(droneConnection, connectionsToSend.Select(c => c.DeviceId));
+        await DisconnectDroneFromDronesAsync(droneId, connectionsToSend);
+        
+        _ = routerService.TryRemoveConnection(Connection.GetName(droneId, ConnectionType.Drone));
+        _ = droneTelemetryService.TryRemove(droneId);
+    }
+
+    private async Task DisconnectHiveFromDroneAsync(Connection droneConnection, IEnumerable<string> connectedDronesIds)
+    {
+        var nextHop = routerService.GetNextHop(droneConnection.Name);
+        if (nextHop == null)
+        {
+            throw new DroneRequestFailedException("Drone is currently unreachable.");
+        }
+        
+        var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
+        var callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
+        var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
+
+        var request = new DisconnectHiveRequest()
+        {
+            Id = communicationConfigurationOptions.Value.HiveID
+        };
+        request.DroneIds.AddRange(connectedDronesIds);
+        var result = await client.DisconnectHiveAsync(request,
+            headers: new Metadata()
+            {
+                {RoutingConstants.DestinationHeaderName, droneConnection.Name},
+            });
+        if (!result.Result.IsSuccess)
+        {
+            throw new DroneRequestFailedException($"Drone '{droneConnection.Name}' failed to disconnect.");
+        }
+    }
+
+    private async Task DisconnectDroneFromDronesAsync(string droneId, IEnumerable<Connection> connections)
+    {
+        var tasks = connections
+            .Select(async c =>
+            {
+                var nextHop = routerService.GetNextHop(c.Name);
+                if (nextHop == null)
+                {
+                    logger.LogError("Drone '{DroneConnectionName}' is unreachable.", c.Name);
+                    return;
+                }
+                
+                var connectionChannel = grpcChannelFactory.Create(nextHop.GrpcUri);
+                var connectionCallInvoker = connectionChannel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
+                var connectionClient = new Shared.Grpc.DroneService.DroneServiceClient(connectionCallInvoker);
+                var request = new DisconnectDroneRequest()
+                {
+                    Id = droneId,
+                };
+                var result = await connectionClient.DisconnectDroneAsync(
+                    request,
+                    headers: new Metadata()
+                    {
+                        {RoutingConstants.DestinationHeaderName, c.Name},
+                    });
+                if (!result.Result.IsSuccess)
+                {
+                    logger.LogError("Drone '{DroneConnectionName}' failed to disconnect the requested drone.", c.Name);
                 }
             });
         await Task.WhenAll(tasks);

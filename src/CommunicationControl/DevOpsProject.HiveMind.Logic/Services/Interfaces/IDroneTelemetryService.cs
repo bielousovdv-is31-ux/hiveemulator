@@ -4,8 +4,8 @@ namespace DevOpsProject.HiveMind.Logic.Services.Interfaces;
 
 public interface IDroneTelemetryService
 {
-    bool Add(DroneTelemetryModel model);
-    bool Remove(string droneId);
+    bool TryAdd(DroneTelemetryModel model);
+    bool TryRemove(string droneId);
     void LogTelemetry();
     DroneTelemetryModel GetTelemetryModel(string droneId);
     void UpdateHiveMindLocation();
