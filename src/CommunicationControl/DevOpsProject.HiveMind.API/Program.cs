@@ -1,30 +1,15 @@
-using System.Net;
 using Asp.Versioning;
 using Asp.Versioning.Builder;
-using DevOpsProject.HiveMind.API;
 using DevOpsProject.HiveMind.API.DI;
-using DevOpsProject.HiveMind.API.DronesTelemetryLogging;
 using DevOpsProject.HiveMind.API.Middleware;
-using DevOpsProject.HiveMind.Logic.Grpc;
 using DevOpsProject.HiveMind.Logic.Patterns.Factory.Interfaces;
-using DevOpsProject.HiveMind.Logic.Services;
 using DevOpsProject.HiveMind.Logic.Services.Interfaces;
 using DevOpsProject.Shared.Configuration;
-using DevOpsProject.Shared.Grpc;
-using DevOpsProject.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 using DevOpsProject.Shared.Models.HiveMindCommands;
-using DevOpsProject.Shared.Routing;
-using Grpc.Core;
-using Grpc.Net.Client.Configuration;
-using Listener;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using Polly;
-using Polly.Retry;
 using Serilog;
-using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
-using RetryPolicy = Polly.Retry.RetryPolicy;
 
 var builder = WebApplication.CreateBuilder(args);
 
