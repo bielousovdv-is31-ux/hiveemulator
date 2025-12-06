@@ -122,6 +122,11 @@ public sealed class RouterService : IRouterService
             {
                 action(connection);
 
+                if (connection.Name == _options.CurrentConnection.Name)
+                {
+                    continue;
+                }
+
                 if (connection.State == ConnectionState.Alive)
                 {
                     _ = _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);

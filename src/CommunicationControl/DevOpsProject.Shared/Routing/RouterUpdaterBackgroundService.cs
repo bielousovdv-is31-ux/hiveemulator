@@ -21,6 +21,11 @@ public sealed class RouterUpdaterBackgroundService(ILogger<RouterUpdaterBackgrou
                     routerService.RecalculateHops();
                 }
             }
+            catch (OperationCanceledException operationCanceledException) when (
+                operationCanceledException.CancellationToken == stoppingToken || stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error occured while executing router updater");

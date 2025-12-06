@@ -56,7 +56,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
         var currentTime = DateTimeOffset.UtcNow;
 
         var hiveMindConnections = routerService.GetConnectedDevicesNames(Connection.GetName(communicationConfigurationOptions.Value.HiveID, ConnectionType.Hive));
-        logger.LogInformation("[{Timestamp}] {DroneId}: Location: ({LocationLat},{LocationLon}) Destination: ({DestinationLat},{DestinationLon})", 
+        logger.LogInformation("[{Timestamp}] HiveMind {Id}: Location: ({LocationLat},{LocationLon}) Destination: ({DestinationLat},{DestinationLon})", 
             currentTime, 
             communicationConfigurationOptions.Value.HiveID,
             HiveInMemoryState.CurrentLocation?.Latitude,
@@ -80,7 +80,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
                 continue;
             }
             
-            logger.LogInformation("[{Timestamp}] {DroneId}, {DroneType}: {ConnectionStatus} {State} Location: ({LocationLat},{LocationLon}) Destination: ({DestinationLat},{DestinationLon})", 
+            logger.LogInformation("[{Timestamp}] Drone {DroneId}, {DroneType}: {ConnectionStatus} {State} Location: ({LocationLat},{LocationLon}) Destination: ({DestinationLat},{DestinationLon})", 
                 currentTime, 
                 drone.Id,
                 drone.DroneType,
@@ -90,7 +90,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
                 drone.Location?.Longitude,
                 drone.Destination?.Latitude,
                 drone.Destination?.Longitude);
-            logger.LogInformation("[{TimeStamp}] {DroneId}: Connections: {ConnectionsNames}", currentTime, drone.Id, string.Join(", ", connectedDevices));
+            logger.LogInformation("[{TimeStamp}] Drone {DroneId}: Connections: {ConnectionsNames}", currentTime, drone.Id, string.Join(", ", connectedDevices));
         }
     }
 }

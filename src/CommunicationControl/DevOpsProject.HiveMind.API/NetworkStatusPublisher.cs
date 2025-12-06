@@ -40,6 +40,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                     .Select(c => c.Name)
                     .ToList());
                 var tasks = routerService.GetConnections()
+                    .Where(c => c.Name != connection.Name)
                     .Select(c =>
                     {
                         var nextHop = routerService.GetNextHop(c.Name);
@@ -47,6 +48,11 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                     });
                 
                 await Task.WhenAll(tasks);
+            }
+            catch (OperationCanceledException operationCanceledException) when (
+                operationCanceledException.CancellationToken == stoppingToken || stoppingToken.IsCancellationRequested)
+            {
+                break;
             }
             catch (Exception e)
             {

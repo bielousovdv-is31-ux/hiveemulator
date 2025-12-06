@@ -30,6 +30,11 @@ public class IsAliveConnectionChecker(ILogger<IsAliveConnectionChecker> logger, 
                     connection.State = difference > maxDifference ? ConnectionState.Dead : ConnectionState.Alive;
                 });
             }
+            catch (OperationCanceledException operationCanceledException) when (
+                operationCanceledException.CancellationToken == stoppingToken || stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error occured while executing IsAliveConnectionChecker");
