@@ -3,7 +3,6 @@ using DevOpsProject.HiveMind.Logic.Grpc;
 using DevOpsProject.HiveMind.Logic.Models;
 using DevOpsProject.HiveMind.Logic.Services.Interfaces;
 using DevOpsProject.Shared.Configuration;
-using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Models.HiveMindCommands;
@@ -167,7 +166,7 @@ public sealed class DroneService(
         await Task.WhenAll(tasks);
     }
 
-    public async Task DisconnectDroneAsync(string droneId)
+    public async Task DisconnectDroneAsync(string droneId, bool force)
     {
         var droneConnection = routerService.GetConnectionOrNull(Connection.GetName(droneId, ConnectionType.Drone));
         if (droneConnection == null)
@@ -179,9 +178,19 @@ public sealed class DroneService(
         var connectionsToSend = connections
             .Where(c => c.Name != droneConnection.Name)
             .ToList();
-        
-        await DisconnectHiveFromDroneAsync(droneConnection, connectionsToSend.Select(c => c.DeviceId));
-        await DisconnectDroneFromDronesAsync(droneId, connectionsToSend);
+
+        try
+        {
+            await DisconnectHiveFromDroneAsync(droneConnection, connectionsToSend.Select(c => c.DeviceId));
+            await DisconnectDroneFromDronesAsync(droneId, connectionsToSend);
+        }
+        catch
+        {
+            if (!force)
+            {
+                throw;
+            }
+        }
         
         _ = routerService.TryRemoveConnection(Connection.GetName(droneId, ConnectionType.Drone));
         _ = droneTelemetryService.TryRemove(droneId);

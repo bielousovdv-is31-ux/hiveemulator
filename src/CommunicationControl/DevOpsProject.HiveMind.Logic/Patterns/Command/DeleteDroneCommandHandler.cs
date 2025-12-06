@@ -8,6 +8,6 @@ public sealed class DeleteDroneCommandHandler(IDroneService droneService) : ICom
 {
     public async Task HandleAsync(DeleteDroneCommand command)
     {
-        await droneService.DisconnectDroneAsync(command.DroneId);
+        await droneService.DisconnectDroneAsync(command.DroneId, command.Force);
     }
 }
