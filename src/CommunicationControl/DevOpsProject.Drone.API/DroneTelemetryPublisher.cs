@@ -51,6 +51,11 @@ public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> log
                 var nextHop = routerService.GetNextHop(hiveMindConnection.Name);
                 await udpService.SendMessageAsync(message, nextHop.IpAddress, nextHop.UdpPort);
             }
+            catch (OperationCanceledException operationCanceledException) when (
+                operationCanceledException.CancellationToken == stoppingToken || stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception e)
             {
                 logger.LogError(e, $"Error in {nameof(DroneTelemetryPublisher)}");
