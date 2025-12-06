@@ -19,7 +19,7 @@ public static class RouterServiceExtensions
         services.AddHostedService<IsAliveConnectionChecker>();
 
         services.AddUdpService(configuration);
-        services.AddUdpListener();
+        services.AddUdpListener(opt => opt.IgnoreConnectionResetErrors = true);
 
         services.AddUdpMessageHandler<NetworkStatus, NetworkStatusHandler>();
         
