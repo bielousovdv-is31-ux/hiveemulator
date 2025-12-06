@@ -41,7 +41,7 @@ public sealed class DroneService(
         {
             pingResponse = await client.PingAsync(new PingRequest());
         }
-        catch (RpcException ex)
+        catch (Exception ex)
         {
             throw new DroneRequestFailedException("Failed to ping drone", ex);
         }
