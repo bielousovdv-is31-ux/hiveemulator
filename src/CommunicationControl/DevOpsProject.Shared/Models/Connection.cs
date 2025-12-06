@@ -2,17 +2,10 @@
 
 namespace DevOpsProject.Shared.Models;
 
-public sealed class Connection
+public sealed record Connection(string DeviceId, ConnectionType Type, string IpAddress, int Http1Port, int GrpcPort, int UdpPort, DateTimeOffset LastUpdatedAt) 
 {
     public string Name => GetName(DeviceId, Type);
-    public string DeviceId { get; }
-    public ConnectionType Type { get; }
-    public string IpAddress { get; set; }
-    public int Http1Port { get; set; }
-    public int GrpcPort { get; set; }
-    public int UdpPort { get; set; }
-    public ConnectionState State { get; set; } = ConnectionState.Alive;
-    public DateTimeOffset LastUpdatedAt { get; set; }
+    public ConnectionState State { get; init; } = ConnectionState.Alive;
 
     public Uri Http1Uri
     {
@@ -35,17 +28,6 @@ public sealed class Connection
             };
             return builder.Uri;
         }
-    }
-
-    public Connection(string deviceId, ConnectionType type, string ipAddress, int http1Port, int grpcPort, int udpPort, DateTimeOffset lastUpdatedAt) 
-    {
-        DeviceId = deviceId;
-        Type = type;
-        IpAddress = ipAddress;
-        Http1Port =  http1Port;
-        GrpcPort = grpcPort;
-        UdpPort = udpPort;
-        LastUpdatedAt = lastUpdatedAt;
     }
     
     public static string GetName(string deviceId, ConnectionType type)

@@ -24,11 +24,14 @@ public class IsAliveConnectionChecker(ILogger<IsAliveConnectionChecker> logger, 
                     if (connection.State == ConnectionState.DeadNonRecoverable
                         || connection == options.Value.CurrentConnection)
                     {
-                        return;
+                        return connection;
                     }
 
                     var difference = currentTime - connection.LastUpdatedAt;
-                    connection.State = difference > maxDifference ? ConnectionState.Dead : ConnectionState.Alive;
+                    return connection with
+                    {
+                        State = difference > maxDifference ? ConnectionState.Dead : ConnectionState.Alive
+                    };
                 });
             }
             catch (OperationCanceledException operationCanceledException) when (

@@ -149,13 +149,17 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
             });
         }
 
-        connection.State = ConnectionState.DeadNonRecoverable;
+        var newConnection = connection with
+        {
+            State = ConnectionState.DeadNonRecoverable
+        };
+        var result = routerService.TryUpdateConnection(newConnection);
 
         return Task.FromResult(new SimulateDeadConnectionResponse()
         {
             Result = new Result()
             {
-                IsSuccess = true
+                IsSuccess = result
             }
         });
     }
@@ -185,13 +189,17 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
             });
         }
 
-        connection.State = ConnectionState.Dead;
+        var newConnection = connection with
+        {
+            State = ConnectionState.Dead
+        };
+        var result = routerService.TryUpdateConnection(newConnection);
 
         return Task.FromResult(new StopDeadConnectionSimulationResponse()
         {
             Result = new Result()
             {
-                IsSuccess = true
+                IsSuccess = result
             }
         });
     }

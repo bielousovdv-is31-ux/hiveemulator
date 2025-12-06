@@ -111,16 +111,16 @@ public sealed class RouterService : IRouterService
         }
     }
 
-    public void UpdateConnectionForEach(Action<Connection> action)
+    public void UpdateConnectionForEach(Func<Connection, Connection> func)
     {
-        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(func);
         
         _rwLock.EnterWriteLock();
         try
         {
             foreach (var connection in _connections.Values)
             {
-                action(connection);
+                func(connection);
 
                 if (connection.Name == _options.CurrentConnection.Name)
                 {
@@ -180,6 +180,28 @@ public sealed class RouterService : IRouterService
             
             _connections[connection.Name] = connection;
             _connectedDevices[connection.Name] = connectedDevicesNames.ToHashSet();
+            return true;
+        }
+        finally
+        {
+            _rwLock.ExitWriteLock();
+        }
+    }
+    
+    public bool TryUpdateConnection(Connection connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        
+        _rwLock.EnterWriteLock();
+        try
+        {
+            if (!_connections.ContainsKey(connection.Name))
+            {
+                return false;
+            }
+            
+            _connections[connection.Name] = connection;
+
             return true;
         }
         finally

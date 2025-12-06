@@ -13,15 +13,18 @@ public sealed class NetworkStatusHandler(IRouterService routerService) : IUdpMes
         if (previousConnection == null)
         {
             return Task.CompletedTask;
-
         }
 
-        previousConnection.IpAddress = message.IpAddress;
-        previousConnection.Http1Port = message.Http1Port;
-        previousConnection.GrpcPort = message.GrpcPort;
-        previousConnection.UdpPort = message.UdpPort;
-        previousConnection.LastUpdatedAt = DateTimeOffset.UtcNow;
-        _ = routerService.TryUpdateConnection(previousConnection, message.AliveConnectionNames.ToHashSet());
+        var connection = previousConnection with
+        {
+            IpAddress = message.IpAddress,
+            Http1Port = message.Http1Port,
+            GrpcPort = message.GrpcPort,
+            UdpPort = message.UdpPort,
+            LastUpdatedAt = DateTimeOffset.UtcNow
+        };
+        
+        _ = routerService.TryUpdateConnection(connection, message.AliveConnectionNames.ToHashSet());
         
         return Task.CompletedTask;
     }
