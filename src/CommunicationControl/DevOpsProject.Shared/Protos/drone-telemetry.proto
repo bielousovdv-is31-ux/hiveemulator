@@ -2,6 +2,7 @@
 
 option csharp_namespace = "DevOpsProject.Shared.Grpc";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 
 package shared;
 
@@ -17,6 +18,7 @@ message DroneTelemetry
   google.protobuf.Timestamp timestamp = 6;
   DroneState state = 7;
   Location destination = 8;
+  google.protobuf.StringValue udpDest = 9;
 }
 
 enum DroneState

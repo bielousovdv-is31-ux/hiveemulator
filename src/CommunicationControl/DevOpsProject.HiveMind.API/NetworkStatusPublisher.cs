@@ -24,21 +24,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
 
                 var connection = routerService.GetConnectionOrNull(Connection.GetName(communicationConfigurationOptions.Value.HiveID, Shared.Enums.ConnectionType.Hive))
                                  ?? throw new InvalidOperationException("Hive connection does not exist");
-                var message = new NetworkStatus()
-                {
-                    Id = communicationConfigurationOptions.Value.HiveID,
-                    Type = ConnectionType.HiveMind,
-                    IpAddress = connection.IpAddress,
-                    Http1Port = connection.Http1Port,
-                    GrpcPort = connection.GrpcPort,
-                    UdpPort = connection.UdpPort,
-                    SentAt = DateTimeOffset.UtcNow.ToTimestamp()
-                };
-                message.AliveConnectionNames.AddRange(routerService
-                    .GetConnections()
-                    .Where(c => c.State == ConnectionState.Alive)
-                    .Select(c => c.Name)
-                    .ToList());
+
                 var tasks = routerService.GetConnections()
                     .Select(c =>
                     {
@@ -48,6 +34,23 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                             logger.LogWarning("{Name} is currently unreachable", c.Name);
                             return Task.CompletedTask;
                         }
+                        
+                        var message = new NetworkStatus()
+                        {
+                            Id = communicationConfigurationOptions.Value.HiveID,
+                            Type = ConnectionType.HiveMind,
+                            IpAddress = connection.IpAddress,
+                            Http1Port = connection.Http1Port,
+                            GrpcPort = connection.GrpcPort,
+                            UdpPort = connection.UdpPort,
+                            SentAt = DateTimeOffset.UtcNow.ToTimestamp(),
+                            UdpDest = c.Name
+                        };
+                        message.AliveConnectionNames.AddRange(routerService
+                            .GetConnections()
+                            .Where(conn => conn.State == ConnectionState.Alive)
+                            .Select(conn => conn.Name)
+                            .ToList());
                         
                         return udpService.SendMessageAsync(message, nextHop.IpAddress, nextHop.UdpPort);
                     });

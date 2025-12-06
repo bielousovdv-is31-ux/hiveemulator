@@ -2,6 +2,7 @@ syntax = "proto3";
 
 option csharp_namespace = "DevOpsProject.Shared.Grpc";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 
 package shared;
 
@@ -15,6 +16,7 @@ message NetworkStatus
   int32 udpPort = 6;
   repeated string aliveConnectionNames = 7;
   google.protobuf.Timestamp sentAt = 8;
+  google.protobuf.StringValue udpDest = 9;
 }
 
 enum ConnectionType

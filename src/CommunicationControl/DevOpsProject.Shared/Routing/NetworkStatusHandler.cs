@@ -1,18 +1,33 @@
-﻿using DevOpsProject.Shared.Grpc;
+﻿using Common;
+using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using Listener;
+using Microsoft.Extensions.Logging;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
 
 namespace DevOpsProject.Shared.Routing;
 
-public sealed class NetworkStatusHandler(IRouterService routerService) : IUdpMessageHandler<NetworkStatus>
+public sealed class NetworkStatusHandler(IRouterService routerService, IUdpService udpService, ILogger<NetworkStatusHandler> logger) : IUdpMessageHandler<NetworkStatus>
 {
-    public Task HandleAsync(NetworkStatus message, CancellationToken token)
+    public async Task HandleAsync(NetworkStatus message, CancellationToken token)
     {
+        var currentConnection = routerService.GetCurrentConnection();
+        if (!string.IsNullOrEmpty(message.UdpDest) && message.UdpDest != currentConnection.Name)
+        {
+            var nextHop = routerService.GetNextHop(message.UdpDest);
+            if (nextHop == null)
+            {
+                logger.LogError("Destination {Destination} is not reachable from this drone.", message.UdpDest);
+                return;
+            }
+
+            await udpService.SendMessageAsync(message, nextHop.IpAddress, nextHop.UdpPort);
+        }
+        
         var previousConnection = routerService.GetConnectionOrNull(Connection.GetName(message.Id, (ConnectionType) message.Type));
         if (previousConnection == null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         var connection = previousConnection with
@@ -25,7 +40,5 @@ public sealed class NetworkStatusHandler(IRouterService routerService) : IUdpMes
         };
         
         _ = routerService.TryUpdateConnection(connection, message.AliveConnectionNames.ToHashSet());
-        
-        return Task.CompletedTask;
     }
 }

@@ -19,6 +19,12 @@ public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> log
             try
             {
                 await Task.Delay(options.Value.Delay, stoppingToken);
+                
+                var hiveMindConnection = routerService.GetHiveMindConnection();
+                if (hiveMindConnection == null)
+                {
+                    continue;
+                }
 
                 var currentState = (IDroneState)droneState.Clone();
                 var message = new DroneTelemetry()
@@ -40,13 +46,9 @@ public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> log
                         Latitude = currentState.Destination.Value.Latitude,
                         Longitude = currentState.Destination.Value.Longitude,
                     }
-                    : null
+                    : null,
+                    UdpDest = hiveMindConnection.Name
                 };
-                var hiveMindConnection = routerService.GetHiveMindConnection();
-                if (hiveMindConnection == null)
-                {
-                    continue;
-                }
 
                 var nextHop = routerService.GetNextHop(hiveMindConnection.Name);
                 if (nextHop == null)

@@ -7,6 +7,7 @@ using DevOpsProject.Drone.Logic.State;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Routing;
+using Listener;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
 using DroneState = DevOpsProject.Drone.Logic.State.DroneState;
 
@@ -64,6 +65,8 @@ builder.Services.AddOptions<DroneTelemetryPublisherOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 builder.Services.AddHostedService<DroneTelemetryPublisher>();
+
+builder.Services.AddUdpMessageHandler<DroneTelemetry, DroneTelemetryReroutingHandler>();
 
 var app = builder.Build();
 
