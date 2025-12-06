@@ -80,7 +80,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
                 continue;
             }
             
-            logger.LogInformation("[{Timestamp}] Drone {DroneId}, {DroneType}: {ConnectionStatus} {State} Location: ({LocationLat},{LocationLon}) Destination: ({DestinationLat},{DestinationLon})", 
+            logger.LogInformation("[{Timestamp}] Drone {DroneId}, {DroneType}: {ConnectionStatus} {State} Location: ({LocationLat},{LocationLon}) Destination: ({DestinationLat},{DestinationLon}) Last updated at: {LastUpdatedAt}, Conn last updated at: {ConnectionLastUpdatedAt}", 
                 currentTime, 
                 drone.Id,
                 drone.DroneType,
@@ -89,7 +89,9 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
                 drone.Location?.Latitude,
                 drone.Location?.Longitude,
                 drone.Destination?.Latitude,
-                drone.Destination?.Longitude);
+                drone.Destination?.Longitude,
+                drone.LastUpdatedAt,
+                connection.LastUpdatedAt);
             logger.LogInformation("[{TimeStamp}] Drone {DroneId}: Connections: {ConnectionsNames}", currentTime, drone.Id, string.Join(", ", connectedDevices));
         }
     }
