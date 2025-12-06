@@ -1,4 +1,5 @@
 ﻿using Common;
+using DevOpsProject.Drone.Logic.Services.Interfaces;
 using DevOpsProject.Drone.Logic.State;
 using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
@@ -9,7 +10,7 @@ using ConnectionType = DevOpsProject.Shared.Grpc.ConnectionType;
 
 namespace DevOpsProject.Drone.API;
 
-public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logger, IUdpService udpService, IRouterService routerService, IDroneState droneState, IOptions<NetworkStatusPublisherOptions> options) : BackgroundService
+public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logger, IUdpService udpService, IRouterService routerService, IDroneState droneState, IOptions<NetworkStatusPublisherOptions> options, ISimulationService simulationService) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -25,7 +26,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                                  ?? throw new InvalidOperationException($"Drone connection '{droneState.Name}' does not exist");
 
                 var tasks = routerService.GetConnections()
-                    .Where(c => c.State != ConnectionState.DeadNonRecoverable)
+                    .Where(c => !simulationService.IsIgnoredConnection(c.Name))
                     .Select(c =>
                     {
                         var nextHop = routerService.GetNextHop(c.Name);

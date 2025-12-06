@@ -26,7 +26,8 @@ public sealed class DroneService(
     IDroneTelemetryService droneTelemetryService, 
     IRouterService routerService, 
     IOptions<HiveCommunicationConfig> communicationConfigurationOptions,
-    ILogger<DroneService> logger) : IDroneService
+    ILogger<DroneService> logger,
+    ISimulationService simulationService) : IDroneService
 {
     public async Task ConnectDroneAsync(string ipAddress, int port)
     {
@@ -274,10 +275,7 @@ public sealed class DroneService(
 
         if (command.Connection1Name == currentConnection.Name)
         {
-            _ = routerService.TryUpdateConnection(connection2 with
-            {
-                State = ConnectionState.DeadNonRecoverable
-            });
+            _ = simulationService.AddIgnoredConnection(command.Connection2Name);
         }
         else
         {
@@ -286,10 +284,7 @@ public sealed class DroneService(
 
         if (command.Connection2Name == currentConnection.Name)
         {
-            _ = routerService.TryUpdateConnection(connection1 with
-            {
-                State = ConnectionState.DeadNonRecoverable
-            });
+            _ = simulationService.AddIgnoredConnection(command.Connection1Name);
         }
         else
         {
@@ -334,10 +329,7 @@ public sealed class DroneService(
         
         if (command.Connection1Name == currentConnection.Name)
         {
-            _ = routerService.TryUpdateConnection(connection2 with
-            {
-                State = ConnectionState.Dead
-            });
+            _ = simulationService.RemoveIgnoredConnection(command.Connection2Name);
         }
         else
         {
@@ -346,10 +338,7 @@ public sealed class DroneService(
 
         if (command.Connection2Name == currentConnection.Name)
         {
-            _ = routerService.TryUpdateConnection(connection1 with
-            {
-                State = ConnectionState.Dead
-            });
+            _ = simulationService.RemoveIgnoredConnection(command.Connection1Name);
         }
         else
         {

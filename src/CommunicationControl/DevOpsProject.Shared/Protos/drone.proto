@@ -21,6 +21,8 @@ service DroneService
   rpc StopDeadConnectionSimulation (StopDeadConnectionSimulationRequest) returns (StopDeadConnectionSimulationResponse);
   rpc ConnectHive (ConnectHiveRequest) returns (ConnectHiveResponse);
   rpc DisconnectHive (DisconnectHiveRequest) returns (DisconnectHiveResponse);
+  rpc StopSendingNetworkStatus (StopSendingNetworkStatusRequest) returns (StopSendingNetworkStatusResponse);
+  rpc RestartSendingNetworkStatus (RestartSendingNetworkStatusRequest) returns (RestartSendingNetworkStatusResponse);
 }
 
 message PingRequest
@@ -137,4 +139,24 @@ message DisconnectHiveRequest
 message DisconnectHiveResponse
 {
   Result result = 1;
+}
+
+message StopSendingNetworkStatusRequest
+{
+  
+}
+
+message StopSendingNetworkStatusResponse
+{
+  
+}
+
+message RestartSendingNetworkStatusRequest
+{
+
+}
+
+message RestartSendingNetworkStatusResponse
+{
+
 }

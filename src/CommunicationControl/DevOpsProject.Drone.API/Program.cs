@@ -2,6 +2,7 @@ using System.Net;
 using Common;
 using DevOpsProject.Drone.API;
 using DevOpsProject.Drone.API.Services;
+using DevOpsProject.Drone.Logic.Services;
 using DevOpsProject.Drone.Logic.Services.Interfaces;
 using DevOpsProject.Drone.Logic.State;
 using DevOpsProject.Shared.Grpc;
@@ -26,6 +27,8 @@ builder.Services.AddOptions<DroneInitialStateOptions>()
     .ValidateOnStart();
 builder.Services.AddSingleton<IDroneState, DroneState>();
 builder.Services.AddSingleton<IDroneService, DevOpsProject.Drone.Logic.Services.DroneService>();
+
+builder.Services.AddSingleton<ISimulationService, SimulationService>();
 
 builder.Services.AddRouterService(builder.Configuration, (opt, sp) =>
 {

@@ -11,7 +11,11 @@ using Location = DevOpsProject.Shared.Models.Location;
 
 namespace DevOpsProject.Drone.API.Services;
 
-public sealed class DroneGrpcService(IRouterService routerService, IDroneState droneState, IDroneService droneService) : DroneService.DroneServiceBase
+public sealed class DroneGrpcService(
+    IRouterService routerService, 
+    IDroneState droneState, 
+    IDroneService droneService,
+    ISimulationService simulationService) : DroneService.DroneServiceBase
 {
     public override Task<ConnectHiveResponse> ConnectHive(ConnectHiveRequest request, ServerCallContext context)
     {
@@ -148,12 +152,8 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
                 }
             });
         }
-
-        var newConnection = connection with
-        {
-            State = ConnectionState.DeadNonRecoverable
-        };
-        var result = routerService.TryUpdateConnection(newConnection);
+        
+        var result = simulationService.AddIgnoredConnection(request.ConnectionName);
 
         return Task.FromResult(new SimulateDeadConnectionResponse()
         {
@@ -178,7 +178,7 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
             });
         }
 
-        if (connection.State != ConnectionState.DeadNonRecoverable)
+        if (!simulationService.IsIgnoredConnection(request.ConnectionName))
         {
             return Task.FromResult(new StopDeadConnectionSimulationResponse()
             {
@@ -188,12 +188,8 @@ public sealed class DroneGrpcService(IRouterService routerService, IDroneState d
                 }
             });
         }
-
-        var newConnection = connection with
-        {
-            State = ConnectionState.Dead
-        };
-        var result = routerService.TryUpdateConnection(newConnection);
+        
+        var result = simulationService.RemoveIgnoredConnection(request.ConnectionName);
 
         return Task.FromResult(new StopDeadConnectionSimulationResponse()
         {

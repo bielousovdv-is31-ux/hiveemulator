@@ -1,6 +1,6 @@
 ﻿using Common;
+using DevOpsProject.Drone.Logic.Services.Interfaces;
 using DevOpsProject.Drone.Logic.State;
-using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Routing;
 using Google.Protobuf.WellKnownTypes;
@@ -10,7 +10,7 @@ using DroneType = DevOpsProject.Shared.Grpc.DroneType;
 
 namespace DevOpsProject.Drone.API;
 
-public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> logger, IUdpService udpService, IRouterService routerService, IDroneState droneState, IOptions<DroneTelemetryPublisherOptions> options) : BackgroundService
+public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> logger, IUdpService udpService, IRouterService routerService, IDroneState droneState, IOptions<DroneTelemetryPublisherOptions> options, ISimulationService simulationService) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -23,7 +23,7 @@ public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> log
                 await Task.Delay(options.Value.Delay, stoppingToken);
                 
                 var hiveMindConnection = routerService.GetHiveMindConnection();
-                if (hiveMindConnection == null || hiveMindConnection.State == ConnectionState.DeadNonRecoverable)
+                if (hiveMindConnection == null || simulationService.IsIgnoredConnection(hiveMindConnection.Name))
                 {
                     continue;
                 }

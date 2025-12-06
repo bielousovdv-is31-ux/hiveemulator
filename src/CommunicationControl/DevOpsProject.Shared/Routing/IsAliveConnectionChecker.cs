@@ -21,8 +21,7 @@ public class IsAliveConnectionChecker(ILogger<IsAliveConnectionChecker> logger, 
                 var currentTime = DateTimeOffset.UtcNow;
                 routerService.UpdateConnectionForEach(connection =>
                 {
-                    if (connection.State == ConnectionState.DeadNonRecoverable
-                        || connection == options.Value.CurrentConnection)
+                    if (connection == options.Value.CurrentConnection)
                     {
                         return connection;
                     }
