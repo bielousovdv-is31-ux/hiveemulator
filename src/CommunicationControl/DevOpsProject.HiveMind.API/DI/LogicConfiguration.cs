@@ -27,6 +27,7 @@ namespace DevOpsProject.HiveMind.API.DI
             
             serviceCollection.AddSingleton<IDroneTelemetryService, DroneTelemetryService>();
             serviceCollection.AddSingleton<IDroneService, DroneService>();
+            serviceCollection.AddSingleton<ISimulationService, SimulationService>();
 
             return serviceCollection;
         }
