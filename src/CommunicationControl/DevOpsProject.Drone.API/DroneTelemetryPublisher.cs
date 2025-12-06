@@ -1,10 +1,12 @@
 ﻿using Common;
 using DevOpsProject.Drone.Logic.State;
+using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Routing;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Options;
 using DroneState = DevOpsProject.Shared.Grpc.DroneState;
+using DroneType = DevOpsProject.Shared.Grpc.DroneType;
 
 namespace DevOpsProject.Drone.API;
 
@@ -21,7 +23,7 @@ public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> log
                 await Task.Delay(options.Value.Delay, stoppingToken);
                 
                 var hiveMindConnection = routerService.GetHiveMindConnection();
-                if (hiveMindConnection == null)
+                if (hiveMindConnection == null || hiveMindConnection.State == ConnectionState.DeadNonRecoverable)
                 {
                     continue;
                 }

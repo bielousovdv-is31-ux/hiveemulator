@@ -26,6 +26,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                                  ?? throw new InvalidOperationException("Hive connection does not exist");
 
                 var tasks = routerService.GetConnections()
+                    .Where(c => c.State != ConnectionState.DeadNonRecoverable)
                     .Select(c =>
                     {
                         var nextHop = routerService.GetNextHop(c.Name);
