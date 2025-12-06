@@ -131,20 +131,30 @@ public sealed class RouterService : IRouterService
                 {
                     continue;
                 }
-                
-                if (newConnection.State == ConnectionState.Alive)
-                {
-                    _ = _connectedDevices[_options.CurrentConnection.Name].Add(connectionName);
-                }
-                else
-                {
-                    _ = _connectedDevices[_options.CurrentConnection.Name].Remove(connectionName);
-                }
+
+                RecheckConnectedToByState(connection);
             }
         }
         finally
         {
             _rwLock.ExitWriteLock();
+        }
+    }
+
+    private void RecheckConnectedToByState(Connection connection)
+    {
+        if (connection.Name == _options.CurrentConnection.Name)
+        {
+            return;
+        }
+
+        if (connection.State == ConnectionState.Alive)
+        {
+            _ = _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);
+        }
+        else
+        {
+            _ = _connectedDevices[_options.CurrentConnection.Name].Remove(connection.Name);
         }
     }
 
@@ -159,10 +169,14 @@ public sealed class RouterService : IRouterService
             _connections[connection.Name] = connection;
             _connectedDevices[connection.Name] = connectedDevicesNames.ToHashSet();
 
-            if (connection.Name != _options.CurrentConnection.Name && connection.State == ConnectionState.Alive)
+            if (connection.Name != _options.CurrentConnection.Name)
             {
-                _ = _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);
-                _nextHops[connection.Name] = connection;
+                RecheckConnectedToByState(connection);
+
+                if (connection.State == ConnectionState.Alive)
+                {
+                    _nextHops[connection.Name] = connection;
+                }
             }
         }
         finally
@@ -186,6 +200,8 @@ public sealed class RouterService : IRouterService
             
             _connections[connection.Name] = connection;
             _connectedDevices[connection.Name] = connectedDevicesNames.ToHashSet();
+            RecheckConnectedToByState(connection);
+            
             return true;
         }
         finally
@@ -207,6 +223,7 @@ public sealed class RouterService : IRouterService
             }
             
             _connections[connection.Name] = connection;
+            RecheckConnectedToByState(connection);
 
             return true;
         }
