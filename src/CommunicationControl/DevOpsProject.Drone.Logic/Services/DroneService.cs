@@ -58,18 +58,19 @@ public sealed class DroneService(IDroneState droneState, ILogger<DroneService> l
         lock (_movementLock)
         {
             droneState.Location = CalculateNextPosition(_stepSize);
+            logger.LogInformation("Continue moving... Current location: {@location}, Destination: {@destination}", droneState.Location, droneState.Destination!.Value);
             
             if (AreLocationsEqual(droneState.Location, droneState.Destination!.Value))
             {
-                StopMovingInternal();
                 logger.LogInformation("Reached destination. Current location: {@currentLocation}, Destination: {@destination}", droneState.Location, droneState.Destination!.Value);
+                StopMovingInternal();
             }
         }
     }
     
     private static bool AreLocationsEqual(Location loc1, Location loc2)
     {
-        const float tolerance = 0.000001f;
+        const double tolerance = 0.000001;
         return Math.Abs(loc1.Latitude - loc2.Latitude) < tolerance &&
                Math.Abs(loc1.Longitude - loc2.Longitude) < tolerance;
     }

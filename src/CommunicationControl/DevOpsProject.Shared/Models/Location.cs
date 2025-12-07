@@ -1,8 +1,16 @@
-﻿namespace DevOpsProject.Shared.Models
+﻿using System.Globalization;
+
+namespace DevOpsProject.Shared.Models
 {
     public struct Location
     {
-        public float Latitude { get; set; }
-        public float Longitude { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+
+        public override string ToString()
+        {
+            var invariantCulture = CultureInfo.InvariantCulture;
+            return $"({Latitude.ToString("F6", invariantCulture)},{Longitude.ToString("F6", invariantCulture)}))";
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using DevOpsProject.Shared.Models.HiveMindCommands;
+﻿using DevOpsProject.Shared.Models;
+using DevOpsProject.Shared.Models.HiveMindCommands;
 
 namespace DevOpsProject.HiveMind.Logic.Services.Interfaces;
 
@@ -10,4 +11,6 @@ public interface IDroneService
     Task StopDeadConnectionSimulationAsync(StopDeadConnectionSimulationCommand command);
     Task SimulateDroneStoppedOperatingAsync(SimulateDroneStoppedOperatingCommand command);
     Task StopDroneStoppedOperatingSimulationAsync(StopDroneStoppedOperatingSimulationCommand command);
+    Task MoveToLocationAsync(Location destination);
+    Task StopHiveMindMovingAsync(bool immediateStop);
 }

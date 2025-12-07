@@ -25,7 +25,6 @@ namespace DevOpsProject.HiveMind.API.DI
             serviceCollection.AddTransient<ICommandHandlerFactory, CommandHandlerFactory>();
 
             serviceCollection.AddTransient<IHiveMindService, HiveMindService>();
-            serviceCollection.AddTransient<IHiveMindMovingService, HiveMindMovingService>();
             
             serviceCollection.AddSingleton<IDroneTelemetryService, DroneTelemetryService>();
             serviceCollection.AddSingleton<IDroneService, DroneService>();

@@ -36,7 +36,9 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
 
     public void UpdateHiveMindLocation()
     {
-        var values = _drones.Values.ToList();
+        var values = _drones.Values
+            .Where(c => routerService.GetConnectionOrNull(Connection.GetName(c.Id, ConnectionType.Drone))?.State == ConnectionState.Alive)
+            .ToList();
         var averageLatitude = values.Where(x => x.Location != null).Average(x => x.Location.Value.Latitude);
         var averageLongitude = values.Where(x => x.Location != null).Average(x => x.Location.Value.Longitude);
         HiveInMemoryState.CurrentLocation = new Location()
@@ -57,9 +59,10 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
         var currentTime = DateTimeOffset.UtcNow;
 
         var hiveMindConnections = routerService.GetConnectedDevicesNames(Connection.GetName(communicationConfigurationOptions.Value.HiveID, ConnectionType.Hive));
-        logger.LogInformation("[{Timestamp}] HiveMind {Id}: Location: ({LocationLat},{LocationLon}) Destination: ({DestinationLat},{DestinationLon})", 
+        logger.LogInformation("[{Timestamp}] HiveMind {Id}: {State} Location: ({LocationLat:F6},{LocationLon:F6}) Destination: ({DestinationLat:F6},{DestinationLon:F6})", 
             currentTime, 
             communicationConfigurationOptions.Value.HiveID,
+            HiveInMemoryState.IsMoving ? "Moving" : "Static",
             HiveInMemoryState.CurrentLocation?.Latitude,
             HiveInMemoryState.CurrentLocation?.Longitude,
             HiveInMemoryState.Destination?.Latitude,
@@ -81,7 +84,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
                 continue;
             }
             
-            logger.LogInformation("[{Timestamp}] Drone {DroneId}, {DroneType}: {ConnectionStatus} {State} Location: ({LocationLat},{LocationLon}) Destination: ({DestinationLat},{DestinationLon}) Last updated at: {LastUpdatedAt}, Conn last updated at: {ConnectionLastUpdatedAt}", 
+            logger.LogInformation("[{Timestamp}] Drone {DroneId}, {DroneType}: {ConnectionStatus} {State} Location: ({LocationLat:F6},{LocationLon:F6}) Destination: ({DestinationLat:F6},{DestinationLon:F6}) Last updated at: {LastUpdatedAt}, Conn last updated at: {ConnectionLastUpdatedAt}", 
                 currentTime, 
                 drone.Id,
                 drone.DroneType,

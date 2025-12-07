@@ -130,40 +130,28 @@ public sealed class DroneService(
     
     private async Task ConnectDroneToDronesAsync(IEnumerable<Connection> droneConnections, PingResponse pingResponse)
     {
-        var tasks = droneConnections
-            .Select(async droneConnection =>
+        var request = new ConnectDroneRequest()
+        {
+            Id = pingResponse.Id,
+            IpAddress = pingResponse.IpAddress,
+            Http1Port = pingResponse.Http1Port,
+            GrpcPort = pingResponse.GrpcPort,
+            UdpPort = pingResponse.UdpPort,
+            Timestamp = DateTimeOffset.UtcNow.ToTimestamp()
+        };
+        await SendToAllAsync(droneConnections, async (client, connection) =>
+        {
+            var result = await client.ConnectDroneAsync(
+                request,
+                headers: new Metadata()
+                {
+                    {RoutingConstants.DestinationHeaderName, connection.Name},
+                });
+            if (!result.Result.IsSuccess)
             {
-                var nextHop = routerService.GetNextHop(droneConnection.Name);
-                if (nextHop == null)
-                {
-                    logger.LogError("Drone '{DroneConnectionName}' is unreachable.", droneConnection.Name);
-                    return;
-                }
-                
-                var connectionChannel = grpcChannelFactory.Create(nextHop.GrpcUri);
-                var connectionCallInvoker = connectionChannel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
-                var connectionClient = new Shared.Grpc.DroneService.DroneServiceClient(connectionCallInvoker);
-                var request = new ConnectDroneRequest()
-                {
-                    Id = pingResponse.Id,
-                    IpAddress = pingResponse.IpAddress,
-                    Http1Port = pingResponse.Http1Port,
-                    GrpcPort = pingResponse.GrpcPort,
-                    UdpPort = pingResponse.UdpPort,
-                    Timestamp = DateTimeOffset.UtcNow.ToTimestamp()
-                };
-                var result = await connectionClient.ConnectDroneAsync(
-                    request,
-                    headers: new Metadata()
-                    {
-                        {RoutingConstants.DestinationHeaderName, droneConnection.Name},
-                    });
-                if (!result.Result.IsSuccess)
-                {
-                    logger.LogError("Drone '{DroneConnectionName}' failed to connect.", droneConnection.Name);
-                }
-            });
-        await Task.WhenAll(tasks);
+                logger.LogError("Drone '{DroneConnectionName}' failed to connect.", connection.Name);
+            }
+        });
     }
 
     public async Task DisconnectDroneAsync(string droneId, bool force)
@@ -226,35 +214,23 @@ public sealed class DroneService(
 
     private async Task DisconnectDroneFromDronesAsync(string droneId, IEnumerable<Connection> connections)
     {
-        var tasks = connections
-            .Select(async c =>
+        var request = new DisconnectDroneRequest()
+        {
+            Id = droneId,
+        };
+        await SendToAllAsync(connections, async (client, connection) =>
+        {
+            var result = await client.DisconnectDroneAsync(
+                request,
+                headers: new Metadata()
+                {
+                    {RoutingConstants.DestinationHeaderName, connection.Name},
+                });
+            if (!result.Result.IsSuccess)
             {
-                var nextHop = routerService.GetNextHop(c.Name);
-                if (nextHop == null)
-                {
-                    logger.LogError("Drone '{DroneConnectionName}' is unreachable.", c.Name);
-                    return;
-                }
-                
-                var connectionChannel = grpcChannelFactory.Create(nextHop.GrpcUri);
-                var connectionCallInvoker = connectionChannel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
-                var connectionClient = new Shared.Grpc.DroneService.DroneServiceClient(connectionCallInvoker);
-                var request = new DisconnectDroneRequest()
-                {
-                    Id = droneId,
-                };
-                var result = await connectionClient.DisconnectDroneAsync(
-                    request,
-                    headers: new Metadata()
-                    {
-                        {RoutingConstants.DestinationHeaderName, c.Name},
-                    });
-                if (!result.Result.IsSuccess)
-                {
-                    logger.LogError("Drone '{DroneConnectionName}' failed to disconnect the requested drone.", c.Name);
-                }
-            });
-        await Task.WhenAll(tasks);
+                logger.LogError("Drone '{DroneConnectionName}' failed to disconnect the requested drone.", connection.Name);
+            }
+        });
     }
     
     public async Task SimulateDeadConnectionAsync(SimulateDeadConnectionCommand command)
@@ -416,5 +392,71 @@ public sealed class DroneService(
         {
             throw new DroneRequestFailedException(result.Result.Error);
         }
+    }
+
+    public async Task MoveToLocationAsync(Location destination)
+    {
+        var connections = routerService.GetConnections();
+        var request = new MoveRequest()
+        {
+            Destination = new Shared.Grpc.Location()
+            {
+                Latitude = destination.Latitude,
+                Longitude = destination.Longitude
+            }
+        };
+
+        await SendToAllAsync(connections, async (client, connection) =>
+        {
+            var result = await client.MoveAsync(
+                request,
+                headers: new Metadata()
+                {
+                    {RoutingConstants.DestinationHeaderName, connection.Name},
+                });
+            if (!result.Result.IsSuccess)
+            {
+                logger.LogError("Drone '{DroneConnectionName}' failed to start moving: {Error}.", connection.Name, result.Result.Error);
+            }
+        });
+    }
+
+    public async Task StopHiveMindMovingAsync(bool immediateStop)
+    {
+        var connections = routerService.GetConnections();
+        var request = new StopRequest();
+        
+        await SendToAllAsync(connections, async (client, connection) =>
+        {
+            var result = await client.StopAsync(
+                request,
+                headers: new Metadata()
+                {
+                    {RoutingConstants.DestinationHeaderName, connection.Name},
+                });
+            if (!result.Result.IsSuccess)
+            {
+                logger.LogError("Drone '{DroneConnectionName}' failed to stop moving: {Error}.", connection.Name, result.Result.Error);
+            }
+        });
+    }
+
+    private async Task SendToAllAsync(IEnumerable<Connection> connections, Func<Shared.Grpc.DroneService.DroneServiceClient, Connection, Task> send)
+    {
+        var tasks = connections.Select(async c =>
+        {
+            var nextHop = routerService.GetNextHop(c.Name);
+            if (nextHop == null)
+            {
+                logger.LogError("Drone '{DroneConnectionName}' is unreachable.", c.Name);
+                return;
+            }
+            
+            var connectionChannel = grpcChannelFactory.Create(nextHop.GrpcUri);
+            var connectionCallInvoker = connectionChannel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
+            var connectionClient = new Shared.Grpc.DroneService.DroneServiceClient(connectionCallInvoker);
+            await send(connectionClient, c);
+        });
+        await Task.WhenAll(tasks);
     }
 }
