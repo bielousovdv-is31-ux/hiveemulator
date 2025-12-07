@@ -18,7 +18,7 @@ public static class GrpcConfiguration
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddGrpcClientFactory();
-        services.AddResiliencePipeline<string, object>("grpc-retry", (pipelineBuilder, context) =>
+        services.AddResiliencePipeline("grpc-retry", (pipelineBuilder, context) =>
         {
             var options = context.ServiceProvider.GetRequiredService<IOptions<GrpcResilienceOptions>>().Value;
             pipelineBuilder.AddRetry(new RetryStrategyOptions
@@ -35,7 +35,6 @@ public static class GrpcConfiguration
                 UseJitter = true
             });
         });
-        services.AddSingleton<ResilienceInterceptor>();
         services.AddSingleton<LogHandleExceptionInterceptor>();
         
         return services;

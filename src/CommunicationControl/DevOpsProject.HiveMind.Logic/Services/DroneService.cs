@@ -14,6 +14,8 @@ using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Registry;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
 using Location = DevOpsProject.Shared.Models.Location;
 
@@ -22,13 +24,15 @@ namespace DevOpsProject.HiveMind.Logic.Services;
 public sealed class DroneService(
     LogHandleExceptionInterceptor logHandleExceptionInterceptor, 
     IGrpcChannelFactory grpcChannelFactory, 
-    ResilienceInterceptor retryInterceptor, 
     IDroneTelemetryService droneTelemetryService, 
     IRouterService routerService, 
     IOptions<HiveCommunicationConfig> communicationConfigurationOptions,
     ILogger<DroneService> logger,
-    ISimulationUtility simulationUtility) : IDroneService
+    ISimulationUtility simulationUtility,
+    ResiliencePipelineProvider<string> provider) : IDroneService
 {
+    private readonly ResiliencePipeline _pipeline = provider.GetPipeline("grpc-retry");
+    
     public async Task ConnectDroneAsync(string ipAddress, int port)
     {
         var uriBuilder = new UriBuilder(ipAddress)
@@ -36,13 +40,12 @@ public sealed class DroneService(
             Port = port
         };
         var channel = grpcChannelFactory.Create(new Uri(uriBuilder.ToString()));
-        var callInvoker = channel.Intercept(retryInterceptor);
-        var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
+        var client = new Shared.Grpc.DroneService.DroneServiceClient(channel);
 
         PingResponse pingResponse;
         try
         {
-            pingResponse = await client.PingAsync(new PingRequest());
+            pingResponse = await _pipeline.ExecuteAsync(async ct => await client.PingAsync(new PingRequest(), cancellationToken: ct));
         }
         catch (Exception ex)
         {
@@ -120,9 +123,9 @@ public sealed class DroneService(
         request.AliveConnectionNames.AddRange(routerService.GetConnectedDevicesNames(hiveConnection.Name));
         request.Drones.AddRange(connectDronesRequests);
         
-        var callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
+        var callInvoker = channel.Intercept(logHandleExceptionInterceptor);
         var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
-        var connectionResult = await client.ConnectHiveAsync(request);
+        var connectionResult = await _pipeline.ExecuteAsync(async ct => await client.ConnectHiveAsync(request, cancellationToken: ct));
         if (!connectionResult.Result.IsSuccess)
         {
             throw new DroneRequestFailedException(connectionResult.Result.Error);
@@ -187,26 +190,28 @@ public sealed class DroneService(
 
     private async Task DisconnectHiveFromDroneAsync(Connection droneConnection, IEnumerable<string> connectedDronesIds)
     {
-        var nextHop = routerService.GetNextHop(droneConnection.Name);
-        if (nextHop == null)
+        var result = await _pipeline.ExecuteAsync(async ct =>
         {
-            throw new DroneRequestFailedException("Drone is currently unreachable.");
-        }
-        
-        var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
-        var callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
-        var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
-
-        var request = new DisconnectHiveRequest()
-        {
-            Id = communicationConfigurationOptions.Value.HiveID
-        };
-        request.DroneIds.AddRange(connectedDronesIds);
-        var result = await client.DisconnectHiveAsync(request,
-            headers: new Metadata()
+            var nextHop = routerService.GetNextHop(droneConnection.Name);
+            if (nextHop == null)
             {
-                {RoutingConstants.DestinationHeaderName, droneConnection.Name},
-            });
+                throw new DroneRequestFailedException("Drone is currently unreachable.");
+            }
+        
+            var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
+            var callInvoker = channel.Intercept(logHandleExceptionInterceptor);
+            var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
+
+            var request = new DisconnectHiveRequest()
+            {
+                Id = communicationConfigurationOptions.Value.HiveID
+            };
+            request.DroneIds.AddRange(connectedDronesIds);
+            return await client.DisconnectHiveAsync(request, headers: new Metadata()
+            {
+                { RoutingConstants.DestinationHeaderName, droneConnection.Name },
+            }, cancellationToken: ct);
+        });
         if (!result.Result.IsSuccess)
         {
             throw new DroneRequestFailedException($"Drone '{droneConnection.Name}' failed to disconnect.");
@@ -265,7 +270,7 @@ public sealed class DroneService(
         }
         else
         {
-            await SendSimulateDeadConnectionAsync(connection1, nextHop1, command.Connection2Name, command.Duration);
+            await SendSimulateDeadConnectionAsync(connection1, command.Connection2Name, command.Duration);
         }
 
         if (command.Connection2Name == currentConnection.Name)
@@ -274,25 +279,35 @@ public sealed class DroneService(
         }
         else
         {
-            await SendSimulateDeadConnectionAsync(connection2, nextHop2, command.Connection1Name, command.Duration);
+            await SendSimulateDeadConnectionAsync(connection2, command.Connection1Name, command.Duration);
         }
     }
 
-    private async Task SendSimulateDeadConnectionAsync(Connection sendTo, Connection nextHop, string connectionName, TimeSpan? duration)
+    private async Task SendSimulateDeadConnectionAsync(Connection sendTo, string connectionName, TimeSpan? duration)
     {
-        var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
-        var callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
-        var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
-
-        var result = await client.SimulateDeadConnectionAsync(new SimulateDeadConnectionRequest()
+        var result = await _pipeline.ExecuteAsync(async ct =>
         {
-            ConnectionName = connectionName,
-            Duration = duration.HasValue ? Duration.FromTimeSpan(duration.Value) : null
-        }, new Metadata()
-        {
-            {RoutingConstants.DestinationHeaderName, sendTo.Name}
+            var nextHop = routerService.GetNextHop(sendTo.Name);
+            if (nextHop == null)
+            {
+                logger.LogError("Drone '{DroneConnectionName}' is unreachable.", sendTo.Name);
+                return null;
+            }
+        
+            var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
+            var callInvoker = channel.Intercept(logHandleExceptionInterceptor);
+            var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
+            
+            return await client.SimulateDeadConnectionAsync(new SimulateDeadConnectionRequest()
+            {
+                ConnectionName = connectionName,
+                Duration = duration.HasValue ? Duration.FromTimeSpan(duration.Value) : null
+            }, new Metadata()
+            {
+                { RoutingConstants.DestinationHeaderName, sendTo.Name }
+            }, cancellationToken: ct);
         });
-        if (!result.Result.IsSuccess)
+        if (result != null && !result.Result.IsSuccess)
         {
             logger.LogError("Simulation start failed on connection {ConnectionName} {Result}.", sendTo.Name, result);
         }
@@ -336,13 +351,13 @@ public sealed class DroneService(
     private async Task SendStopDeadConnectionSimulationAsync(Connection sendTo, string connectionName)
     {
         var channel = grpcChannelFactory.Create(sendTo.GrpcUri);
-        var callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
+        var callInvoker = channel.Intercept(logHandleExceptionInterceptor);
         var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
-        var result = await client.StopDeadConnectionSimulationAsync(new StopDeadConnectionSimulationRequest
+        var result = await _pipeline.ExecuteAsync(async ct => await client.StopDeadConnectionSimulationAsync(new StopDeadConnectionSimulationRequest
         {
             ConnectionName = connectionName
-        });
+        }, cancellationToken: ct));
         if (!result.Result.IsSuccess)
         {
             logger.LogError("Simulation stop failed on connection {ConnectionName} {Result}.", sendTo.Name, result);
@@ -357,22 +372,25 @@ public sealed class DroneService(
             throw new DroneRequestFailedException("Drone was not found.");
         }
 
-        var nextHop = routerService.GetNextHop(connection.Name);
-        if (nextHop == null)
+        var result = await _pipeline.ExecuteAsync(async ct =>
         {
-            throw new DroneRequestFailedException("Drone is unreachable.");
-        }
+            var nextHop = routerService.GetNextHop(connection.Name);
+            if (nextHop == null)
+            {
+                throw new DroneRequestFailedException("Drone is unreachable.");
+            }
         
-        var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
-        var callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
-        var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
-
-        var result = await client.StopSendingNetworkStatusAsync(new StopSendingNetworkStatusRequest()
-        {
-            Duration = command.Duration.HasValue ? Duration.FromTimeSpan(command.Duration.Value) : null
-        }, new Metadata()
-        {
-            {RoutingConstants.DestinationHeaderName, connection.Name}
+            var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
+            var callInvoker = channel.Intercept(logHandleExceptionInterceptor);
+            var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
+            
+            return await client.StopSendingNetworkStatusAsync(new StopSendingNetworkStatusRequest()
+            {
+                Duration = command.Duration.HasValue ? Duration.FromTimeSpan(command.Duration.Value) : null
+            }, new Metadata()
+            {
+                { RoutingConstants.DestinationHeaderName, connection.Name }
+            }, cancellationToken: ct);
         });
         if (!result.Result.IsSuccess)
         {
@@ -389,10 +407,11 @@ public sealed class DroneService(
         }
         
         var channel = grpcChannelFactory.Create(connection.GrpcUri);
-        var callInvoker = channel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
+        var callInvoker = channel.Intercept(logHandleExceptionInterceptor);
         var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
-        var result = await client.RestartSendingNetworkStatusAsync(new RestartSendingNetworkStatusRequest());
+        var result = await _pipeline
+            .ExecuteAsync(async ct => await client.RestartSendingNetworkStatusAsync(new RestartSendingNetworkStatusRequest(), cancellationToken: ct));
         if (!result.Result.IsSuccess)
         {
             throw new DroneRequestFailedException(result.Result.Error);
@@ -417,7 +436,7 @@ public sealed class DroneService(
                 request,
                 headers: new Metadata()
                 {
-                    {RoutingConstants.DestinationHeaderName, connection.Name},
+                    { RoutingConstants.DestinationHeaderName, connection.Name },
                 });
             if (!result.Result.IsSuccess)
             {
@@ -433,11 +452,12 @@ public sealed class DroneService(
         
         await SendToAllAsync(connections, async (client, connection) =>
         {
+            
             var result = await client.StopAsync(
                 request,
                 headers: new Metadata()
                 {
-                    {RoutingConstants.DestinationHeaderName, connection.Name},
+                    { RoutingConstants.DestinationHeaderName, connection.Name },
                 });
             if (!result.Result.IsSuccess)
             {
@@ -450,17 +470,21 @@ public sealed class DroneService(
     {
         var tasks = connections.Select(async c =>
         {
-            var nextHop = routerService.GetNextHop(c.Name);
-            if (nextHop == null)
+            await _pipeline.ExecuteAsync(async _ =>
             {
-                logger.LogError("Drone '{DroneConnectionName}' is unreachable.", c.Name);
-                return;
-            }
-            
-            var connectionChannel = grpcChannelFactory.Create(nextHop.GrpcUri);
-            var connectionCallInvoker = connectionChannel.Intercept(retryInterceptor, logHandleExceptionInterceptor);
-            var connectionClient = new Shared.Grpc.DroneService.DroneServiceClient(connectionCallInvoker);
-            await send(connectionClient, c);
+                var nextHop = routerService.GetNextHop(c.Name);
+                if (nextHop == null)
+                {
+                    logger.LogError("Drone '{DroneConnectionName}' is unreachable.", c.Name);
+                    return;
+                }
+
+                var connectionChannel = grpcChannelFactory.Create(nextHop.GrpcUri);
+                var connectionCallInvoker =
+                    connectionChannel.Intercept(logHandleExceptionInterceptor);
+                var connectionClient = new Shared.Grpc.DroneService.DroneServiceClient(connectionCallInvoker);
+                await send(connectionClient, c);
+            });
         });
         await Task.WhenAll(tasks);
     }
