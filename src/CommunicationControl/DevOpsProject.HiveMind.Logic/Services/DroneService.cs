@@ -182,6 +182,16 @@ public sealed class DroneService(
         try
         {
             await DisconnectHiveFromDroneAsync(droneConnection, connectionsToSend.Select(c => c.DeviceId));
+        }
+        catch
+        {
+            if (!force)
+            {
+                throw;
+            }
+        }
+        try
+        {
             await DisconnectDroneFromDronesAsync(droneId, connectionsToSend);
         }
         catch
