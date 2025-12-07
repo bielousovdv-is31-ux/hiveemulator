@@ -1,6 +1,6 @@
-﻿namespace DevOpsProject.Drone.Logic.Services.Interfaces;
+﻿namespace DevOpsProject.Shared.Simulation;
 
-public interface ISimulationService
+public interface ISimulationUtility
 {
     bool IsStopped { get; }
     void Stop(TimeSpan? duration = null);

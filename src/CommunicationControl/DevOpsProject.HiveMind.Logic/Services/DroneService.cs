@@ -7,6 +7,7 @@ using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Models.HiveMindCommands;
 using DevOpsProject.Shared.Routing;
+using DevOpsProject.Shared.Simulation;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
@@ -26,7 +27,7 @@ public sealed class DroneService(
     IRouterService routerService, 
     IOptions<HiveCommunicationConfig> communicationConfigurationOptions,
     ILogger<DroneService> logger,
-    ISimulationService simulationService) : IDroneService
+    ISimulationUtility simulationUtility) : IDroneService
 {
     public async Task ConnectDroneAsync(string ipAddress, int port)
     {
@@ -260,7 +261,7 @@ public sealed class DroneService(
 
         if (command.Connection1Name == currentConnection.Name)
         {
-            _ = simulationService.AddIgnoredConnection(command.Connection2Name, command.Duration);
+            _ = simulationUtility.AddIgnoredConnection(command.Connection2Name, command.Duration);
         }
         else
         {
@@ -269,7 +270,7 @@ public sealed class DroneService(
 
         if (command.Connection2Name == currentConnection.Name)
         {
-            _ = simulationService.AddIgnoredConnection(command.Connection1Name, command.Duration);
+            _ = simulationUtility.AddIgnoredConnection(command.Connection1Name, command.Duration);
         }
         else
         {
@@ -315,7 +316,7 @@ public sealed class DroneService(
         
         if (command.Connection1Name == currentConnection.Name)
         {
-            _ = simulationService.RemoveIgnoredConnection(command.Connection2Name);
+            _ = simulationUtility.RemoveIgnoredConnection(command.Connection2Name);
         }
         else
         {
@@ -324,7 +325,7 @@ public sealed class DroneService(
 
         if (command.Connection2Name == currentConnection.Name)
         {
-            _ = simulationService.RemoveIgnoredConnection(command.Connection1Name);
+            _ = simulationUtility.RemoveIgnoredConnection(command.Connection1Name);
         }
         else
         {

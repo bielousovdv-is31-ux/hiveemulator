@@ -5,6 +5,7 @@ using DevOpsProject.HiveMind.Logic.Patterns.Factory.Interfaces;
 using DevOpsProject.HiveMind.Logic.Services;
 using DevOpsProject.HiveMind.Logic.Services.Interfaces;
 using DevOpsProject.Shared.Models.HiveMindCommands;
+using DevOpsProject.Shared.Simulation;
 
 namespace DevOpsProject.HiveMind.API.DI
 {
@@ -28,7 +29,7 @@ namespace DevOpsProject.HiveMind.API.DI
             
             serviceCollection.AddSingleton<IDroneTelemetryService, DroneTelemetryService>();
             serviceCollection.AddSingleton<IDroneService, DroneService>();
-            serviceCollection.AddSingleton<ISimulationService, SimulationService>();
+            serviceCollection.AddSimulationUtility();
 
             return serviceCollection;
         }

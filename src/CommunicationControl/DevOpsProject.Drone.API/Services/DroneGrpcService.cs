@@ -1,9 +1,9 @@
 ﻿using DevOpsProject.Drone.Logic.Services.Interfaces;
 using DevOpsProject.Drone.Logic.State;
-using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Routing;
+using DevOpsProject.Shared.Simulation;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
@@ -15,7 +15,7 @@ public sealed class DroneGrpcService(
     IRouterService routerService, 
     IDroneState droneState, 
     IDroneService droneService,
-    ISimulationService simulationService) : DroneService.DroneServiceBase
+    ISimulationUtility simulationUtility) : DroneService.DroneServiceBase
 {
     public override Task<ConnectHiveResponse> ConnectHive(ConnectHiveRequest request, ServerCallContext context)
     {
@@ -153,7 +153,7 @@ public sealed class DroneGrpcService(
             });
         }
         
-        var result = simulationService.AddIgnoredConnection(request.ConnectionName, request.Duration?.ToTimeSpan());
+        var result = simulationUtility.AddIgnoredConnection(request.ConnectionName, request.Duration?.ToTimeSpan());
 
         return Task.FromResult(new SimulateDeadConnectionResponse()
         {
@@ -178,7 +178,7 @@ public sealed class DroneGrpcService(
             });
         }
 
-        if (!simulationService.IsIgnoredConnection(request.ConnectionName))
+        if (!simulationUtility.IsIgnoredConnection(request.ConnectionName))
         {
             return Task.FromResult(new StopDeadConnectionSimulationResponse()
             {
@@ -189,7 +189,7 @@ public sealed class DroneGrpcService(
             });
         }
         
-        var result = simulationService.RemoveIgnoredConnection(request.ConnectionName);
+        var result = simulationUtility.RemoveIgnoredConnection(request.ConnectionName);
 
         return Task.FromResult(new StopDeadConnectionSimulationResponse()
         {
@@ -232,7 +232,7 @@ public sealed class DroneGrpcService(
 
     public override Task<StopSendingNetworkStatusResponse> StopSendingNetworkStatus(StopSendingNetworkStatusRequest request, ServerCallContext context)
     {
-        simulationService.Stop(request.Duration?.ToTimeSpan());
+        simulationUtility.Stop(request.Duration?.ToTimeSpan());
 
         return Task.FromResult(new StopSendingNetworkStatusResponse()
         {
@@ -245,7 +245,7 @@ public sealed class DroneGrpcService(
 
     public override Task<RestartSendingNetworkStatusResponse> RestartSendingNetworkStatus(RestartSendingNetworkStatusRequest request, ServerCallContext context)
     {
-        simulationService.Restart();
+        simulationUtility.Restart();
 
         return Task.FromResult(new RestartSendingNetworkStatusResponse()
         {

@@ -1,16 +1,16 @@
 ﻿using Common;
-using DevOpsProject.Drone.Logic.Services.Interfaces;
 using DevOpsProject.Drone.Logic.State;
 using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Routing;
+using DevOpsProject.Shared.Simulation;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Options;
 using ConnectionType = DevOpsProject.Shared.Grpc.ConnectionType;
 
 namespace DevOpsProject.Drone.API;
 
-public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logger, IUdpService udpService, IRouterService routerService, IDroneState droneState, IOptions<NetworkStatusPublisherOptions> options, ISimulationService simulationService) : BackgroundService
+public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logger, IUdpService udpService, IRouterService routerService, IDroneState droneState, IOptions<NetworkStatusPublisherOptions> options, ISimulationUtility simulationUtility) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -21,7 +21,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
             try
             {
                 await Task.Delay(options.Value.Delay, stoppingToken);
-                if (simulationService.IsStopped)
+                if (simulationUtility.IsStopped)
                 {
                     continue;
                 }
@@ -30,7 +30,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                                  ?? throw new InvalidOperationException($"Drone connection '{droneState.Name}' does not exist");
 
                 var tasks = routerService.GetConnections()
-                    .Where(c => !simulationService.IsIgnoredConnection(c.Name))
+                    .Where(c => !simulationUtility.IsIgnoredConnection(c.Name))
                     .Select(c =>
                     {
                         var message = new NetworkStatus()

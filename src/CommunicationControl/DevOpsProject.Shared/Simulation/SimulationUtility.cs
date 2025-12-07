@@ -1,8 +1,6 @@
-﻿using DevOpsProject.Drone.Logic.Services.Interfaces;
+﻿namespace DevOpsProject.Shared.Simulation;
 
-namespace DevOpsProject.Drone.Logic.Services;
-
-public sealed class SimulationService : ISimulationService
+public sealed class SimulationUtility : ISimulationUtility
 {
     public bool IsStopped => _isStoppedForever || (_stopTime.HasValue && _stopTime >= DateTimeOffset.UtcNow);
     private bool _isStoppedForever;

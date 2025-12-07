@@ -1,17 +1,17 @@
 ﻿using Common;
-using DevOpsProject.HiveMind.Logic.Services.Interfaces;
 using DevOpsProject.Shared.Configuration;
 using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Routing;
+using DevOpsProject.Shared.Simulation;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Options;
 using ConnectionType = DevOpsProject.Shared.Grpc.ConnectionType;
 
 namespace DevOpsProject.HiveMind.API;
 
-public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logger, IOptions<HiveCommunicationConfig> communicationConfigurationOptions, IUdpService udpService, IRouterService routerService, IOptions<NetworkStatusPublisherOptions> options, ISimulationService simulationService) : BackgroundService
+public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logger, IOptions<HiveCommunicationConfig> communicationConfigurationOptions, IUdpService udpService, IRouterService routerService, IOptions<NetworkStatusPublisherOptions> options, ISimulationUtility simulationUtility) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -27,7 +27,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                                  ?? throw new InvalidOperationException("Hive connection does not exist");
 
                 var tasks = routerService.GetConnections()
-                    .Where(c => !simulationService.IsIgnoredConnection(c.Name))
+                    .Where(c => !simulationUtility.IsIgnoredConnection(c.Name))
                     .Select(c =>
                     {
                         var message = new NetworkStatus()
