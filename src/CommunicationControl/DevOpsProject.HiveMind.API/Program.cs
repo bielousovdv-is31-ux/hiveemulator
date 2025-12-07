@@ -94,4 +94,12 @@ groupBuilder.MapPost("command", async (HiveMindCommand command, [FromServices]IC
     return Results.Ok();
 });
 
+groupBuilder.MapGet("drones", ([FromServices] IDroneService droneService) => Results.Ok(droneService.GetDrones()));
+
+groupBuilder.MapGet("drones/{id}", ([FromRoute] string id, [FromServices] IDroneService droneService) =>
+{
+    var result = droneService.GetDrone(id);
+    return result == null ? Results.NotFound() : Results.Ok(result);
+});
+
 app.Run();

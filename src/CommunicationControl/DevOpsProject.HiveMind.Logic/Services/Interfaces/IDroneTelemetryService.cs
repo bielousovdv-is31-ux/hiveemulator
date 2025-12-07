@@ -10,4 +10,5 @@ public interface IDroneTelemetryService
     DroneTelemetryModel GetTelemetryModel(string droneId);
     void UpdateHiveMindLocation();
     void Update(DroneTelemetryModel model);
+    IReadOnlyList<DroneTelemetryModel> GetTelemetryModels();
 }

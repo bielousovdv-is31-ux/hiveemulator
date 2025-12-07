@@ -1,4 +1,5 @@
-﻿using DevOpsProject.Shared.Models;
+﻿using DevOpsProject.HiveMind.Logic.Dto;
+using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Models.HiveMindCommands;
 
 namespace DevOpsProject.HiveMind.Logic.Services.Interfaces;
@@ -13,4 +14,6 @@ public interface IDroneService
     Task StopDroneStoppedOperatingSimulationAsync(StopDroneStoppedOperatingSimulationCommand command);
     Task MoveToLocationAsync(Location destination);
     Task StopHiveMindMovingAsync(bool immediateStop);
+    IReadOnlyList<DroneDto> GetDrones();
+    DroneDetailsDto GetDrone(string id);
 }

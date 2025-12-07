@@ -22,7 +22,12 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
 
     public DroneTelemetryModel GetTelemetryModel(string droneId)
     {
-        return _drones[droneId];
+        return _drones.GetValueOrDefault(droneId);
+    }
+
+    public IReadOnlyList<DroneTelemetryModel> GetTelemetryModels()
+    {
+        return _drones.Values.OrderBy(d => d.Id).ToList();
     }
 
     public void Update(DroneTelemetryModel model)

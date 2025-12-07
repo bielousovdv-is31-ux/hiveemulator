@@ -1,9 +1,11 @@
-﻿using DevOpsProject.HiveMind.Logic.Exceptions;
+﻿using DevOpsProject.HiveMind.Logic.Dto;
+using DevOpsProject.HiveMind.Logic.Exceptions;
 using DevOpsProject.HiveMind.Logic.Grpc;
 using DevOpsProject.HiveMind.Logic.Models;
 using DevOpsProject.HiveMind.Logic.Services.Interfaces;
 using DevOpsProject.HiveMind.Logic.State;
 using DevOpsProject.Shared.Configuration;
+using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Models.HiveMindCommands;
@@ -18,6 +20,8 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Registry;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
+using DroneState = DevOpsProject.Shared.Enums.DroneState;
+using DroneType = DevOpsProject.Shared.Enums.DroneType;
 using Location = DevOpsProject.Shared.Models.Location;
 
 namespace DevOpsProject.HiveMind.Logic.Services;
@@ -561,5 +565,58 @@ public sealed class DroneService(
         }
         
         return metadata;
+    }
+
+    public IReadOnlyList<DroneDto> GetDrones()
+    {
+        var telemetry = droneTelemetryService.GetTelemetryModels();
+        var connections = routerService.GetConnections();
+        var dtos = new DroneDto[telemetry.Count];
+        for (var i = 0; i < telemetry.Count; i++)
+        {
+            var droneTelemetry = telemetry[i];
+            var droneConnection = connections.FirstOrDefault(c =>
+                c.Name == Connection.GetName(droneTelemetry.Id, ConnectionType.Drone));
+            var dto = new DroneDto(
+                droneTelemetry.Id,
+                droneTelemetry.DroneType,
+                droneConnection?.State ?? ConnectionState.Undefined,
+                droneTelemetry.Location,
+                droneTelemetry.LastUpdatedAt,
+                droneTelemetry.State,
+                droneTelemetry.Destination,
+                droneConnection?.Name,
+                droneConnection?.LastUpdatedAt);
+            dtos[i] = dto;
+        }
+        return dtos;
+    }
+
+    public DroneDetailsDto GetDrone(string id)
+    {
+        var telemetry = droneTelemetryService.GetTelemetryModel(id);
+        var connection = routerService.GetConnectionOrNull(Connection.GetName(id, ConnectionType.Drone));
+
+        if (telemetry == null && connection == null)
+        {
+            return null;
+        }
+        
+        return new DroneDetailsDto(
+            id,
+            telemetry?.DroneType ?? DroneType.Undefined,
+            connection?.State ?? ConnectionState.Undefined,
+            telemetry?.Location,
+            telemetry?.Speed,
+            telemetry?.Height,
+            telemetry?.LastUpdatedAt,
+            telemetry?.State ?? DroneState.None,
+            telemetry?.Destination,
+            connection?.Name,
+            connection?.IpAddress,
+            connection?.Http1Port,
+            connection?.GrpcPort,
+            connection?.UdpPort,
+            connection?.LastUpdatedAt);
     }
 }
