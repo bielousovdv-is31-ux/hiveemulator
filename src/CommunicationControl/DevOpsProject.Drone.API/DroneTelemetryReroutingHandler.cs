@@ -19,6 +19,7 @@ public sealed class DroneTelemetryReroutingHandler(IRouterService routerService,
                 return;
             }
 
+            logger.LogInformation("Redirecting drone telemetry message {Message} to {Destination}", message, nextHop.Name);
             await udpService.SendMessageAsync(message, nextHop.IpAddress, nextHop.UdpPort);
         }
     }

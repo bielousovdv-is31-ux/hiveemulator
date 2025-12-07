@@ -10,7 +10,7 @@ using Polly;
 
 namespace DevOpsProject.Drone.API;
 
-public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFactory, IRouterService routerService, IDroneState droneState) : Interceptor
+public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFactory, IRouterService routerService, IDroneState droneState, ILogger<ReroutingGrpcInterceptor> logger) : Interceptor
 {
     private static readonly ConcurrentDictionary<string, object> MethodCache = new();
 
@@ -30,6 +30,7 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
         {
             throw new InvalidOperationException($"Destination {destination} is not reachable from this drone.");
         }
+        logger.LogInformation("Redirecting gRPC message {MessageType} to {Destination}", request.GetType(), destinationConnection.Name);
         
         var channel = grpcChannelFactory.Create(destinationConnection.GrpcUri);
         var invoker = channel.CreateCallInvoker();

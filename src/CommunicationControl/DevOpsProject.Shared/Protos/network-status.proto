@@ -16,7 +16,6 @@ message NetworkStatus
   int32 udpPort = 6;
   repeated string aliveConnectionNames = 7;
   google.protobuf.Timestamp sentAt = 8;
-  google.protobuf.StringValue udpDest = 9;
 }
 
 enum ConnectionType

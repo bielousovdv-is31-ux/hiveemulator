@@ -30,13 +30,6 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                     .Where(c => !simulationService.IsIgnoredConnection(c.Name))
                     .Select(c =>
                     {
-                        var nextHop = routerService.GetNextHop(c.Name);
-                        if (nextHop == null)
-                        {
-                            logger.LogWarning("{Name} is currently unreachable, trying to send network status directly", c.Name);
-                            nextHop = c;
-                        }
-                        
                         var message = new NetworkStatus()
                         {
                             Id = communicationConfigurationOptions.Value.HiveID,
@@ -45,8 +38,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                             Http1Port = connection.Http1Port,
                             GrpcPort = connection.GrpcPort,
                             UdpPort = connection.UdpPort,
-                            SentAt = DateTimeOffset.UtcNow.ToTimestamp(),
-                            UdpDest = c.Name
+                            SentAt = DateTimeOffset.UtcNow.ToTimestamp()
                         };
                         message.AliveConnectionNames.AddRange(routerService
                             .GetConnections()
@@ -54,7 +46,7 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                             .Select(conn => conn.Name)
                             .ToList());
                         
-                        return udpService.SendMessageAsync(message, nextHop.IpAddress, nextHop.UdpPort);
+                        return udpService.SendMessageAsync(message, c.IpAddress, c.UdpPort);
                     });
                 
                 await Task.WhenAll(tasks);

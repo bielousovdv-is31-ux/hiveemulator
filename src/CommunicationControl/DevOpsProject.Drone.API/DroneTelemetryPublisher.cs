@@ -27,7 +27,7 @@ public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> log
                 }
                 
                 var hiveMindConnection = routerService.GetHiveMindConnection();
-                if (hiveMindConnection == null || simulationService.IsIgnoredConnection(hiveMindConnection.Name))
+                if (hiveMindConnection == null)
                 {
                     continue;
                 }
