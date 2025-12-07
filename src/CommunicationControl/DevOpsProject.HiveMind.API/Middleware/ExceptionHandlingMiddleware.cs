@@ -17,11 +17,12 @@ namespace DevOpsProject.HiveMind.API.Middleware
 
         public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
         {
-            var (statusCode, message, details) = exception.GetBaseException() switch
+            var baseException = exception.GetBaseException();
+            var (statusCode, message, details) = baseException switch
             {
-                DroneRequestFailedException => (StatusCodes.Status400BadRequest, exception.Message, null),
+                DroneRequestFailedException => (StatusCodes.Status400BadRequest, baseException.Message, null),
                 _ => (StatusCodes.Status500InternalServerError, "Unexpected error occured",
-                    _hostEnvironment.IsDevelopment() ? exception.ToString() : null)
+                    _hostEnvironment.IsDevelopment() ? baseException.ToString() : null)
             };
             
             httpContext.Response.StatusCode = statusCode;
