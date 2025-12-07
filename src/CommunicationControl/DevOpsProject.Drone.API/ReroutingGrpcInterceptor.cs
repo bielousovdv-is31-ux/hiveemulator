@@ -26,16 +26,6 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
             return await continuation(request, context);
         }
         
-        var destinationConnection = routerService.GetNextHop(destination);
-        if (destinationConnection == null)
-        {
-            throw new InvalidOperationException($"Destination {destination} is not reachable from this drone.");
-        }
-        logger.LogInformation("Redirecting gRPC message {MessageType} to {Destination}", request.GetType(), destinationConnection.Name);
-        
-        var channel = grpcChannelFactory.Create(destinationConnection.GrpcUri);
-        var invoker = channel.CreateCallInvoker();
-        
         var headers = context.RequestHeaders;
         var previousHopHeader = context.RequestHeaders.FirstOrDefault(h => h.Key == RoutingConstants.PreviousHopHeaderName);
         if (previousHopHeader != null)
@@ -59,6 +49,16 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
 
         return await retryPolicy.ExecuteAsync(async () =>
         {
+            var destinationConnection = routerService.GetNextHop(destination);
+            if (destinationConnection == null)
+            {
+                throw new InvalidOperationException($"Destination {destination} is not reachable from this drone.");
+            }
+            logger.LogInformation("Redirecting gRPC message {MessageType} to {Destination}", request.GetType(), destinationConnection.Name);
+        
+            var channel = grpcChannelFactory.Create(destinationConnection.GrpcUri);
+            var invoker = channel.CreateCallInvoker();
+            
             using var call = invoker.AsyncUnaryCall(
                 methodDefinition,
                 null, 
