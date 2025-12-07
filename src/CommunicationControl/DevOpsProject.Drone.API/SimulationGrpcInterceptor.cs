@@ -13,7 +13,7 @@ public sealed class SimulationGrpcInterceptor(ISimulationUtility simulationUtili
         UnaryServerMethod<TRequest, TResponse> continuation)
     {
         var previousHopHeader = context.RequestHeaders.FirstOrDefault(h => h.Key == RoutingConstants.PreviousHopHeaderName);
-        if (previousHopHeader != null && simulationUtility.IsIgnoredConnection(previousHopHeader.Value))
+        if ((previousHopHeader != null && simulationUtility.IsIgnoredConnection(previousHopHeader.Value)) || simulationUtility.IsStopped)
         {
             logger.LogWarning("Simulation - failing the connection.");
             throw new RpcException(new Status(StatusCode.Unavailable, "The service is currently unavailable. Please try again later."));

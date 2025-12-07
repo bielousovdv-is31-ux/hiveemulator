@@ -303,8 +303,7 @@ public sealed class DroneService(
                 var nextHop = routerService.GetNextHop(sendTo.Name);
                 if (nextHop == null)
                 {
-                    logger.LogError("Drone '{DroneConnectionName}' is unreachable.", sendTo.Name);
-                    return null;
+                    throw new DroneRequestFailedException($"Drone {sendTo.Name} is unreachable.");
                 }
 
                 var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
@@ -516,8 +515,7 @@ public sealed class DroneService(
                     var nextHop = routerService.GetNextHop(c.Name);
                     if (nextHop == null)
                     {
-                        logger.LogError("Drone '{DroneConnectionName}' is unreachable.", c.Name);
-                        return;
+                        throw new DroneRequestFailedException($"Drone {c.Name} is unreachable.");
                     }
 
                     var connectionChannel = grpcChannelFactory.Create(nextHop.GrpcUri);
