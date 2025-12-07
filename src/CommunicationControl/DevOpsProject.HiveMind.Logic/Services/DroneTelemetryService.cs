@@ -44,6 +44,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
             Latitude = averageLatitude,
             Longitude = averageLongitude
         };
+        HiveInMemoryState.IsMoving = values.Any(x => x.State == DroneState.Moving);
     }
     
     public bool TryRemove(string droneId)
