@@ -45,7 +45,7 @@ public sealed class DroneService(
         PingResponse pingResponse;
         try
         {
-            pingResponse = await _pipeline.ExecuteAsync(async ct => await client.PingAsync(new PingRequest(), cancellationToken: ct));
+            pingResponse = await _pipeline.ExecuteAsync(async ct => await client.PingAsync(new PingRequest(), headers: GetMetadata(), cancellationToken: ct));
         }
         catch (Exception ex)
         {
@@ -125,7 +125,7 @@ public sealed class DroneService(
         
         var callInvoker = channel.Intercept(logHandleExceptionInterceptor);
         var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
-        var connectionResult = await _pipeline.ExecuteAsync(async ct => await client.ConnectHiveAsync(request, cancellationToken: ct));
+        var connectionResult = await _pipeline.ExecuteAsync(async ct => await client.ConnectHiveAsync(request, headers: GetMetadata(), cancellationToken: ct));
         if (!connectionResult.Result.IsSuccess)
         {
             throw new DroneRequestFailedException(connectionResult.Result.Error);
@@ -147,10 +147,7 @@ public sealed class DroneService(
         {
             var result = await client.ConnectDroneAsync(
                 request,
-                headers: new Metadata()
-                {
-                    {RoutingConstants.DestinationHeaderName, connection.Name},
-                });
+                headers: GetMetadata(connection.Name));
             if (!result.Result.IsSuccess)
             {
                 logger.LogError("Drone '{DroneConnectionName}' failed to connect.", connection.Name);
@@ -207,10 +204,7 @@ public sealed class DroneService(
                 Id = communicationConfigurationOptions.Value.HiveID
             };
             request.DroneIds.AddRange(connectedDronesIds);
-            return await client.DisconnectHiveAsync(request, headers: new Metadata()
-            {
-                { RoutingConstants.DestinationHeaderName, droneConnection.Name },
-            }, cancellationToken: ct);
+            return await client.DisconnectHiveAsync(request, headers: GetMetadata(droneConnection.Name), cancellationToken: ct);
         });
         if (!result.Result.IsSuccess)
         {
@@ -228,10 +222,7 @@ public sealed class DroneService(
         {
             var result = await client.DisconnectDroneAsync(
                 request,
-                headers: new Metadata()
-                {
-                    {RoutingConstants.DestinationHeaderName, connection.Name},
-                });
+                headers: GetMetadata(connection.Name));
             if (!result.Result.IsSuccess)
             {
                 logger.LogError("Drone '{DroneConnectionName}' failed to disconnect the requested drone.", connection.Name);
@@ -302,10 +293,7 @@ public sealed class DroneService(
             {
                 ConnectionName = connectionName,
                 Duration = duration.HasValue ? Duration.FromTimeSpan(duration.Value) : null
-            }, new Metadata()
-            {
-                { RoutingConstants.DestinationHeaderName, sendTo.Name }
-            }, cancellationToken: ct);
+            }, GetMetadata(sendTo.Name), cancellationToken: ct);
         });
         if (result != null && !result.Result.IsSuccess)
         {
@@ -357,7 +345,7 @@ public sealed class DroneService(
         var result = await _pipeline.ExecuteAsync(async ct => await client.StopDeadConnectionSimulationAsync(new StopDeadConnectionSimulationRequest
         {
             ConnectionName = connectionName
-        }, cancellationToken: ct));
+        }, GetMetadata(), cancellationToken: ct));
         if (!result.Result.IsSuccess)
         {
             logger.LogError("Simulation stop failed on connection {ConnectionName} {Result}.", sendTo.Name, result);
@@ -387,10 +375,7 @@ public sealed class DroneService(
             return await client.StopSendingNetworkStatusAsync(new StopSendingNetworkStatusRequest()
             {
                 Duration = command.Duration.HasValue ? Duration.FromTimeSpan(command.Duration.Value) : null
-            }, new Metadata()
-            {
-                { RoutingConstants.DestinationHeaderName, connection.Name }
-            }, cancellationToken: ct);
+            }, GetMetadata(connection.Name), cancellationToken: ct);
         });
         if (!result.Result.IsSuccess)
         {
@@ -411,7 +396,7 @@ public sealed class DroneService(
         var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
         var result = await _pipeline
-            .ExecuteAsync(async ct => await client.RestartSendingNetworkStatusAsync(new RestartSendingNetworkStatusRequest(), cancellationToken: ct));
+            .ExecuteAsync(async ct => await client.RestartSendingNetworkStatusAsync(new RestartSendingNetworkStatusRequest(), headers: GetMetadata(), cancellationToken: ct));
         if (!result.Result.IsSuccess)
         {
             throw new DroneRequestFailedException(result.Result.Error);
@@ -434,10 +419,7 @@ public sealed class DroneService(
         {
             var result = await client.MoveAsync(
                 request,
-                headers: new Metadata()
-                {
-                    { RoutingConstants.DestinationHeaderName, connection.Name },
-                });
+                headers: GetMetadata(connection.Name));
             if (!result.Result.IsSuccess)
             {
                 logger.LogError("Drone '{DroneConnectionName}' failed to start moving: {Error}.", connection.Name, result.Result.Error);
@@ -455,10 +437,7 @@ public sealed class DroneService(
             
             var result = await client.StopAsync(
                 request,
-                headers: new Metadata()
-                {
-                    { RoutingConstants.DestinationHeaderName, connection.Name },
-                });
+                headers: GetMetadata(connection.Name));
             if (!result.Result.IsSuccess)
             {
                 logger.LogError("Drone '{DroneConnectionName}' failed to stop moving: {Error}.", connection.Name, result.Result.Error);
@@ -487,5 +466,19 @@ public sealed class DroneService(
             });
         });
         await Task.WhenAll(tasks);
+    }
+
+    private Metadata GetMetadata(string destinationName = null)
+    {
+        var metadata = new Metadata()
+        {
+            { RoutingConstants.PreviousHopHeaderName, routerService.GetCurrentConnection().Name }
+        };
+        if (!string.IsNullOrEmpty(destinationName))
+        {
+            metadata.Add(RoutingConstants.DestinationHeaderName, destinationName);
+        }
+        
+        return metadata;
     }
 }

@@ -21,6 +21,7 @@ builder.Services.AddOptions<GrpcResilienceOptions>()
     .ValidateOnStart();
 builder.Services.AddGrpc(opt =>
 {
+    opt.Interceptors.Add<SimulationGrpcInterceptor>();
     opt.Interceptors.Add<ReroutingGrpcInterceptor>();
 });
 builder.Services.AddGrpcClientFactory();

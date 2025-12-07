@@ -37,6 +37,12 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
         var invoker = channel.CreateCallInvoker();
         
         var headers = context.RequestHeaders;
+        var previousHopHeader = context.RequestHeaders.FirstOrDefault(h => h.Key == RoutingConstants.PreviousHopHeaderName);
+        if (previousHopHeader != null)
+        {
+            headers.Remove(previousHopHeader);
+            headers.Add(RoutingConstants.PreviousHopHeaderName, routerService.GetCurrentConnection().Name);
+        }
 
         var methodDefinition = (Method<TRequest, TResponse>) MethodCache.GetOrAdd(
             context.Method, 
