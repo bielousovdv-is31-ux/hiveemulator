@@ -172,20 +172,24 @@ public sealed class DroneService(
 
     public async Task DisconnectDroneAsync(string droneId, bool force)
     {
-        var droneConnection = routerService.GetConnectionOrNull(Connection.GetName(droneId, ConnectionType.Drone));
-        if (droneConnection == null)
+        var connectionName = Connection.GetName(droneId, ConnectionType.Drone);
+        var droneConnection = routerService.GetConnectionOrNull(connectionName);
+        if (droneConnection == null && !force)
         {
             throw new DroneRequestFailedException("Drone not found.");
         }
         
         var connections = routerService.GetConnections();
         var connectionsToSend = connections
-            .Where(c => c.Name != droneConnection.Name)
+            .Where(c => c.Name != connectionName)
             .ToList();
 
         try
         {
-            await DisconnectHiveFromDroneAsync(droneConnection, connectionsToSend.Select(c => c.DeviceId));
+            if (droneConnection != null)
+            {
+                await DisconnectHiveFromDroneAsync(droneConnection, connectionsToSend.Select(c => c.DeviceId));
+            }
         }
         catch
         {

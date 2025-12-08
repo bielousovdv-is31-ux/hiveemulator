@@ -95,13 +95,12 @@ public sealed class DroneGrpcService(
     public override Task<DisconnectDroneResponse> DisconnectDrone(DisconnectDroneRequest request,
         ServerCallContext context)
     {
-        var removed = routerService.TryRemoveConnection(Connection.GetName(request.Id, ConnectionType.Drone));
+        _ = routerService.TryRemoveConnection(Connection.GetName(request.Id, ConnectionType.Drone));
         return Task.FromResult(new DisconnectDroneResponse()
         {
             Result = new Result()
             {
-                IsSuccess = removed,
-                Error = removed ? null : "This drone is already connected"
+                IsSuccess = true
             }
         });
     }
