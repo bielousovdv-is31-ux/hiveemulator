@@ -323,7 +323,8 @@ public sealed class RouterService : IRouterService
                 }
                 else
                 {
-                    foreach (var (connectionName, devices) in _connectedDevices)
+                    var aliveConnectedDevices = _connectedDevices.Where(item => _connections[item.Key].State == ConnectionState.Alive);
+                    foreach (var (connectionName, devices) in aliveConnectedDevices)
                     {
                         if (devices.Contains(hiveMind.Name))
                         {
