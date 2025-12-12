@@ -7,15 +7,12 @@ public interface IRouterService
     Connection GetNextHop(string name);
     Connection GetConnectionOrNull(string name);
     bool IsHiveMindConnected();
-    ISet<string> GetConnectedDevicesNames(string name);
+    ICollection<ForeignConnection> GetConnectedDevices(string name);
     IReadOnlyList<Connection> GetConnections(bool includeCurrent = false);
-    void UpdateConnectionForEach(Func<Connection, Connection> func);
-    void AddOrUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
-    bool TryUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames);
+    void AddOrUpdateConnection(Connection connection, IEnumerable<ForeignConnection> connectedDevices);
+    bool TryUpdateConnection(Connection connection, IEnumerable<ForeignConnection> connectedDevices);
     bool TryRemoveConnection(string connectionName);
-    bool IsRecalculationNeeded();
     void RecalculateHops();
     Connection GetHiveMindConnection();
-    bool TryUpdateConnection(Connection connection);
     Connection GetCurrentConnection();
 }

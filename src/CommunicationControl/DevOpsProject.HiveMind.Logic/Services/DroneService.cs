@@ -5,7 +5,6 @@ using DevOpsProject.HiveMind.Logic.Models;
 using DevOpsProject.HiveMind.Logic.Services.Interfaces;
 using DevOpsProject.HiveMind.Logic.State;
 using DevOpsProject.Shared.Configuration;
-using DevOpsProject.Shared.Enums;
 using DevOpsProject.Shared.Grpc;
 using DevOpsProject.Shared.Models;
 using DevOpsProject.Shared.Models.HiveMindCommands;
@@ -22,6 +21,7 @@ using Polly.Registry;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
 using DroneState = DevOpsProject.Shared.Enums.DroneState;
 using DroneType = DevOpsProject.Shared.Enums.DroneType;
+using ForeignConnection = DevOpsProject.Shared.Grpc.ForeignConnection;
 using Location = DevOpsProject.Shared.Models.Location;
 
 namespace DevOpsProject.HiveMind.Logic.Services;
@@ -105,7 +105,12 @@ public sealed class DroneService(
                     UdpPort = c.UdpPort,
                     Timestamp = DateTimeOffset.UtcNow.ToTimestamp()
                 };
-                request.AliveConnectionNames.AddRange(routerService.GetConnectedDevicesNames(c.Name));
+                request.Connections.AddRange(routerService.GetConnectedDevices(c.Name)
+                    .Select(d => new ForeignConnection()
+                    {
+                        Name = d.ConnectionName,
+                        LastUpdatedAt = d.LastUpdatedAt.ToTimestamp()
+                    }));
                 return request;
             })
             .ToList();
@@ -125,7 +130,12 @@ public sealed class DroneService(
             UdpPort = hiveConnection.UdpPort,
             Timestamp = DateTimeOffset.UtcNow.ToTimestamp(),
         };
-        request.AliveConnectionNames.AddRange(routerService.GetConnectedDevicesNames(hiveConnection.Name));
+        request.Connections.AddRange(routerService.GetConnectedDevices(hiveConnection.Name)
+            .Select(d => new ForeignConnection()
+            {
+                Name = d.ConnectionName,
+                LastUpdatedAt = d.LastUpdatedAt.ToTimestamp()
+            }));
         request.Drones.AddRange(connectDronesRequests);
         
         var callInvoker = channel.Intercept(logExceptionInterceptor);
@@ -269,7 +279,7 @@ public sealed class DroneService(
         });
     }
     
-    public async Task SimulateDeadConnectionAsync(SimulateDeadConnectionCommand command)
+    public async Task SimulateDeadConnectionAsync(SimulateBadConnectionCommand command)
     {
         var (connection1, connection2) = (routerService.GetConnectionOrNull(command.Connection1Name), routerService.GetConnectionOrNull(command.Connection2Name));
 
@@ -296,24 +306,24 @@ public sealed class DroneService(
 
         if (command.Connection1Name == currentConnection.Name)
         {
-            _ = simulationUtility.AddIgnoredConnection(command.Connection2Name, command.Duration);
+            simulationUtility.SimulateBadConnection(new BadConnection(command.Connection2Name, command.Latency, command.Duration));
         }
         else
         {
-            await SendSimulateDeadConnectionAsync(connection1, command.Connection2Name, command.Duration);
+            await SendSimulateDeadConnectionAsync(connection1, new BadConnection(command.Connection2Name, command.Latency, command.Duration));
         }
 
         if (command.Connection2Name == currentConnection.Name)
         {
-            _ = simulationUtility.AddIgnoredConnection(command.Connection1Name, command.Duration);
+            simulationUtility.SimulateBadConnection(new BadConnection(command.Connection1Name, command.Latency, command.Duration));
         }
         else
         {
-            await SendSimulateDeadConnectionAsync(connection2, command.Connection1Name, command.Duration);
+            await SendSimulateDeadConnectionAsync(connection2, new BadConnection(command.Connection1Name, command.Latency, command.Duration));
         }
     }
 
-    private async Task SendSimulateDeadConnectionAsync(Connection sendTo, string connectionName, TimeSpan? duration)
+    private async Task SendSimulateDeadConnectionAsync(Connection sendTo, BadConnection command)
     {
         try
         {
@@ -329,10 +339,11 @@ public sealed class DroneService(
                 var callInvoker = channel.Intercept(logExceptionInterceptor);
                 var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
-                return await client.SimulateDeadConnectionAsync(new SimulateDeadConnectionRequest()
+                return await client.SimulateBadConnectionAsync(new SimulateBadConnectionRequest()
                 {
-                    ConnectionName = connectionName,
-                    Duration = duration.HasValue ? Duration.FromTimeSpan(duration.Value) : null
+                    ConnectionName = command.Name,
+                    Duration = command.Duration.HasValue ? Duration.FromTimeSpan(command.Duration.Value) : null,
+                    Latency = command.Latency.ToDuration()
                 }, GetMetadata(sendTo.Name), cancellationToken: ct);
             });
             if (result != null && !result.Result.IsSuccess)
@@ -349,7 +360,7 @@ public sealed class DroneService(
         }
     }
 
-    public async Task StopDeadConnectionSimulationAsync(StopDeadConnectionSimulationCommand command)
+    public async Task StopDeadConnectionSimulationAsync(StopBadConnectionSimulationCommand command)
     {
         var (connection1, connection2) = (routerService.GetConnectionOrNull(command.Connection1Name), routerService.GetConnectionOrNull(command.Connection2Name));
 
@@ -367,7 +378,7 @@ public sealed class DroneService(
         
         if (command.Connection1Name == currentConnection.Name)
         {
-            _ = simulationUtility.RemoveIgnoredConnection(command.Connection2Name);
+            _ = simulationUtility.StopBadConnectionSimulation(command.Connection2Name);
         }
         else
         {
@@ -376,7 +387,7 @@ public sealed class DroneService(
 
         if (command.Connection2Name == currentConnection.Name)
         {
-            _ = simulationUtility.RemoveIgnoredConnection(command.Connection1Name);
+            _ = simulationUtility.StopBadConnectionSimulation(command.Connection1Name);
         }
         else
         {
@@ -392,8 +403,8 @@ public sealed class DroneService(
 
         try
         {
-            var result = await _pipeline.ExecuteAsync(async ct => await client.StopDeadConnectionSimulationAsync(
-                new StopDeadConnectionSimulationRequest
+            var result = await _pipeline.ExecuteAsync(async ct => await client.StopBadConnectionSimulationAsync(
+                new StopBadConnectionSimulationRequest
                 {
                     ConnectionName = connectionName
                 }, GetMetadata(), cancellationToken: ct));
@@ -432,9 +443,10 @@ public sealed class DroneService(
                 var callInvoker = channel.Intercept(logExceptionInterceptor);
                 var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
-                return await client.StopSendingNetworkStatusAsync(new StopSendingNetworkStatusRequest()
+                return await client.SimulateBadDeviceAsync(new SimulateBadDeviceRequest()
                 {
-                    Duration = command.Duration.HasValue ? Duration.FromTimeSpan(command.Duration.Value) : null
+                    Duration = command.Duration.HasValue ? Duration.FromTimeSpan(command.Duration.Value) : null,
+                    Latency = command.Latency.ToDuration()
                 }, GetMetadata(connection.Name), cancellationToken: ct);
             });
             if (!result.Result.IsSuccess)
@@ -465,7 +477,7 @@ public sealed class DroneService(
         {
             var result = await _pipeline
                 .ExecuteAsync(async ct =>
-                    await client.RestartSendingNetworkStatusAsync(new RestartSendingNetworkStatusRequest(),
+                    await client.StopBadDeviceSimulationAsync(new StopBadDeviceSimulationRequest(),
                         headers: GetMetadata(), cancellationToken: ct));
             if (!result.Result.IsSuccess)
             {
@@ -575,6 +587,7 @@ public sealed class DroneService(
     {
         var telemetry = droneTelemetryService.GetTelemetryModels();
         var connections = routerService.GetConnections();
+        var currentTime = DateTimeOffset.UtcNow;
         var dtos = new DroneDto[telemetry.Count];
         for (var i = 0; i < telemetry.Count; i++)
         {
@@ -584,7 +597,7 @@ public sealed class DroneService(
             var dto = new DroneDto(
                 droneTelemetry.Id,
                 droneTelemetry.DroneType,
-                droneConnection?.State ?? ConnectionState.Undefined,
+                droneConnection is not null ? currentTime - droneConnection.LastUpdatedAt : null,
                 droneTelemetry.Location,
                 droneTelemetry.LastUpdatedAt,
                 droneTelemetry.State,
@@ -609,7 +622,7 @@ public sealed class DroneService(
         return new DroneDetailsDto(
             id,
             telemetry?.DroneType ?? DroneType.Undefined,
-            connection?.State ?? ConnectionState.Undefined,
+            connection is not null ? DateTimeOffset.UtcNow - connection.LastUpdatedAt : null,
             telemetry?.Location,
             telemetry?.Speed,
             telemetry?.Height,

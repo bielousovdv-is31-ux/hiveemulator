@@ -5,7 +5,6 @@ namespace DevOpsProject.Shared.Models;
 public sealed record Connection(string DeviceId, ConnectionType Type, string IpAddress, int Http1Port, int GrpcPort, int UdpPort, DateTimeOffset LastUpdatedAt) 
 {
     public string Name => GetName(DeviceId, Type);
-    public ConnectionState State { get; init; } = ConnectionState.Alive;
 
     public Uri Http1Uri
     {

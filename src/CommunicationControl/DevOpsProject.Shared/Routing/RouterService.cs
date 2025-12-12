@@ -8,8 +8,8 @@ public sealed class RouterService : IRouterService
 {
     private readonly ReaderWriterLockSlim _rwLock = new ReaderWriterLockSlim();
     
-    private Dictionary<string, ISet<string>> _lastConnectedDevicesSnapshot = new();
-    private readonly Dictionary<string, ISet<string>> _connectedDevices = new();
+    private Dictionary<string, List<ForeignConnection>> _lastConnectedDevicesSnapshot = new();
+    private readonly Dictionary<string, List<ForeignConnection>> _connectedDevices = new();
     private readonly Dictionary<string, Connection> _connections = new();
     
     private Dictionary<string, Connection> _nextHops = new();
@@ -78,7 +78,7 @@ public sealed class RouterService : IRouterService
         }
     }
     
-    public ISet<string> GetConnectedDevicesNames(string name)
+    public ICollection<ForeignConnection> GetConnectedDevices(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
         
@@ -110,74 +110,19 @@ public sealed class RouterService : IRouterService
             _rwLock.ExitReadLock();
         }
     }
-
-    public void UpdateConnectionForEach(Func<Connection, Connection> func)
-    {
-        ArgumentNullException.ThrowIfNull(func);
-        
-        _rwLock.EnterWriteLock();
-        try
-        {
-            var connections = _connections.Values.ToList();
-            for (var i = 0; i < connections.Count; i++)
-            {
-                var connection = connections[i];
-                var connectionName = connection.Name;
-                
-                var newConnection = func(connection);
-                _connections[connectionName] = newConnection;
-                
-                if (connectionName == _options.CurrentConnection.Name)
-                {
-                    continue;
-                }
-
-                RecheckConnectedToByState(connection);
-            }
-        }
-        finally
-        {
-            _rwLock.ExitWriteLock();
-        }
-    }
-
-    private void RecheckConnectedToByState(Connection connection)
-    {
-        if (connection.Name == _options.CurrentConnection.Name)
-        {
-            return;
-        }
-
-        if (connection.State == ConnectionState.Alive)
-        {
-            _ = _connectedDevices[_options.CurrentConnection.Name].Add(connection.Name);
-        }
-        else
-        {
-            _ = _connectedDevices[_options.CurrentConnection.Name].Remove(connection.Name);
-        }
-    }
-
-    public void AddOrUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames)
+    
+    public void AddOrUpdateConnection(Connection connection, IEnumerable<ForeignConnection> connectedDevices)
     {
         ArgumentNullException.ThrowIfNull(connection);
-        ArgumentNullException.ThrowIfNull(connectedDevicesNames);
+        ArgumentNullException.ThrowIfNull(connectedDevices);
         
         _rwLock.EnterWriteLock();
         try
         {
             _connections[connection.Name] = connection;
-            _connectedDevices[connection.Name] = connectedDevicesNames.ToHashSet();
+            _connectedDevices[connection.Name] = connectedDevices.ToList();
 
-            if (connection.Name != _options.CurrentConnection.Name)
-            {
-                RecheckConnectedToByState(connection);
-
-                if (connection.State == ConnectionState.Alive)
-                {
-                    _nextHops[connection.Name] = connection;
-                }
-            }
+            _nextHops[connection.Name] = connection;
         }
         finally
         {
@@ -185,10 +130,10 @@ public sealed class RouterService : IRouterService
         }
     }
     
-    public bool TryUpdateConnection(Connection connection, IEnumerable<string> connectedDevicesNames)
+    public bool TryUpdateConnection(Connection connection, IEnumerable<ForeignConnection> connectedDevices)
     {
         ArgumentNullException.ThrowIfNull(connection);
-        ArgumentNullException.ThrowIfNull(connectedDevicesNames);
+        ArgumentNullException.ThrowIfNull(connectedDevices);
         
         _rwLock.EnterWriteLock();
         try
@@ -199,32 +144,8 @@ public sealed class RouterService : IRouterService
             }
             
             _connections[connection.Name] = connection;
-            _connectedDevices[connection.Name] = connectedDevicesNames.ToHashSet();
-            RecheckConnectedToByState(connection);
+            _connectedDevices[connection.Name] = connectedDevices.ToList();
             
-            return true;
-        }
-        finally
-        {
-            _rwLock.ExitWriteLock();
-        }
-    }
-    
-    public bool TryUpdateConnection(Connection connection)
-    {
-        ArgumentNullException.ThrowIfNull(connection);
-        
-        _rwLock.EnterWriteLock();
-        try
-        {
-            if (!_connections.ContainsKey(connection.Name))
-            {
-                return false;
-            }
-            
-            _connections[connection.Name] = connection;
-            RecheckConnectedToByState(connection);
-
             return true;
         }
         finally
@@ -244,7 +165,12 @@ public sealed class RouterService : IRouterService
             _ = _connectedDevices.Remove(connectionName);
             if (connectionName != _options.CurrentConnection.Name)
             {
-                _ = _connectedDevices[_options.CurrentConnection.Name].Remove(connectionName);
+                var connectedDevice = _connectedDevices[_options.CurrentConnection.Name]
+                    .FirstOrDefault(c => c.ConnectionName == connectionName);
+                if (connectedDevice != null)
+                {
+                    _connectedDevices[_options.CurrentConnection.Name].Remove(connectedDevice);
+                }
             }
             
             return result;
@@ -252,33 +178,6 @@ public sealed class RouterService : IRouterService
         finally
         {
             _rwLock.ExitWriteLock();
-        }
-    }
-    
-    public bool IsRecalculationNeeded()
-    {
-        _rwLock.EnterReadLock();
-        try
-        {
-            if (_lastConnectedDevicesSnapshot.Count != _connectedDevices.Count ||
-                _lastConnectedDevicesSnapshot.Count == 0)
-            {
-                return true;
-            }
-
-            for (var i = 0; i < _lastConnectedDevicesSnapshot.Count; i++)
-            {
-                if (!_lastConnectedDevicesSnapshot.ElementAt(i).Value.SetEquals(_connectedDevices.ElementAt(i).Value))
-                {
-                    return true;
-                }
-            }
-            
-            return false;
-        }
-        finally
-        {
-            _rwLock.ExitReadLock();
         }
     }
     
@@ -290,50 +189,15 @@ public sealed class RouterService : IRouterService
 
         try
         {
-            _lastConnectedDevicesSnapshot = new Dictionary<string, ISet<string>>();
+            _lastConnectedDevicesSnapshot = new Dictionary<string, List<ForeignConnection>>();
             foreach (var (connectionName, devices) in _connectedDevices)
             {
-                _lastConnectedDevicesSnapshot[connectionName] = new HashSet<string>(devices);
-            }
-
-            var hiveMind = _connections
-                .Select(kvp => kvp.Value)
-                .FirstOrDefault(c => c.Type == ConnectionType.Hive);
-            var hiveMindIsConnected = hiveMind is not null;
-            _nextHops = new();
-            if (hiveMindIsConnected)
-            {
-                _nextHops[hiveMind.Name] = null;
+                _lastConnectedDevicesSnapshot[connectionName] = new List<ForeignConnection>(devices);
             }
             
-            var currentConnectionIsHiveMind = hiveMindIsConnected && hiveMind.Name.Equals(currentConnectionName);
-            var connections = currentConnectionIsHiveMind
-                ? _connections.Values.ToList()
-                : _connections.Select(c => c.Value)
-                    .Where(c => c != hiveMind)
-                    .ToList();
+            _nextHops = new Dictionary<string, Connection>();
             
-            RecalculateHopsInternal(connections, currentConnectionName);
-
-            if (hiveMindIsConnected && !currentConnectionIsHiveMind)
-            {
-                if (_connectedDevices[currentConnectionName!].Contains(hiveMind.Name))
-                {
-                    _nextHops[hiveMind.Name] = hiveMind;
-                }
-                else
-                {
-                    var aliveConnectedDevices = _connectedDevices.Where(item => _connections[item.Key].State == ConnectionState.Alive);
-                    foreach (var (connectionName, devices) in aliveConnectedDevices)
-                    {
-                        if (devices.Contains(hiveMind.Name))
-                        {
-                            _nextHops[hiveMind.Name] = _connections[connectionName];
-                            break;
-                        }
-                    }
-                }
-            }
+            RecalculateHopsInternal();
         }
         finally
         {
@@ -341,8 +205,14 @@ public sealed class RouterService : IRouterService
         }
     }
     
-    private void RecalculateHopsInternal(IReadOnlyList<Connection> connections, string currentConnectionName)
+    private void RecalculateHopsInternal()
     {
+        var currentTime = DateTimeOffset.UtcNow;
+        
+        var connections = _connections.Values.ToList();
+        var currentConnectionName = _options.CurrentConnection.Name;
+        var currentConnectionCanRedirect = ConnectionCanRedirect(_options.CurrentConnection);
+        
         var connectionIndexes = connections
             .Select((c, i) =>  new { c, i })
             .ToDictionary(c => c.c.Name, c => c.i);
@@ -352,10 +222,15 @@ public sealed class RouterService : IRouterService
         for (var i = 0; i < connections.Count; i++)
         {
             var connection = connections[i];
+            if (!ConnectionCanRedirect(connection))
+            {
+                continue;
+            }
 
             var adjacentNodes = _connectedDevices[connection.Name]
-                .Where(c => connectionIndexes.ContainsKey(c))
-                .Select(c => new Edge(connectionIndexes[c], 1))
+                .Where(c => connectionIndexes.ContainsKey(c.ConnectionName))
+                .Where(c => currentConnectionCanRedirect || c.ConnectionName != currentConnectionName)
+                .Select(c => new Edge(connectionIndexes[c.ConnectionName], (currentTime - c.LastUpdatedAt).Ticks))
                 .ToList();
             adjacencyList[i] = adjacentNodes;
         }
@@ -368,13 +243,15 @@ public sealed class RouterService : IRouterService
             _nextHops[connections[i].Name] = nextHops[i].HasValue ? connections[nextHops[i].Value] : null;
         }
     }
+
+    private static bool ConnectionCanRedirect(Connection connection) => connection.Type != ConnectionType.Hive;
     
     private static int?[] GetNextHopsByDijkstraAlgorithm(List<Edge>[] adjacencyList, int sourceNode)
     {
-        var priorityQueue = new PriorityQueue<int, int>();
+        var priorityQueue = new PriorityQueue<int, long>();
 
         // Distance array: stores shortest distance from source
-        var distances = new int[adjacencyList.Length];
+        var distances = new long[adjacencyList.Length];
         var nextHops = new int?[adjacencyList.Length];
         for (var i = 0; i < adjacencyList.Length; i++)
         {
@@ -388,7 +265,7 @@ public sealed class RouterService : IRouterService
         // Process the queue until all reachable vertices are finalized
         while (priorityQueue.Count > 0)
         {
-            _ = priorityQueue.TryDequeue(out int node, out int distance);
+            _ = priorityQueue.TryDequeue(out int node, out long distance);
 
             // If this distance is not the latest shortest one, skip it
             if (distance > distances[node])
@@ -418,5 +295,5 @@ public sealed class RouterService : IRouterService
 
     public Connection GetCurrentConnection() => _options.CurrentConnection;
     
-    private record struct Edge(int EndNode, int Weight);
+    private record struct Edge(int EndNode, long Weight);
 }

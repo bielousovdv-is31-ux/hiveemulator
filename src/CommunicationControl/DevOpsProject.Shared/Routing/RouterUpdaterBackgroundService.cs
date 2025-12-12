@@ -16,10 +16,7 @@ public sealed class RouterUpdaterBackgroundService(ILogger<RouterUpdaterBackgrou
             {
                 await Task.Delay(options.Value.RouterUpdaterDelay, stoppingToken);
 
-                if (routerService.IsRecalculationNeeded())
-                {
-                    routerService.RecalculateHops();
-                }
+                routerService.RecalculateHops();
             }
             catch (OperationCanceledException operationCanceledException) when (
                 operationCanceledException.CancellationToken == stoppingToken || stoppingToken.IsCancellationRequested)

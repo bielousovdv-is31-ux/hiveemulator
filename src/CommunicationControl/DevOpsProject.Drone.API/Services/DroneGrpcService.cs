@@ -7,6 +7,7 @@ using DevOpsProject.Shared.Simulation;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
+using ForeignConnection = DevOpsProject.Shared.Models.ForeignConnection;
 using Location = DevOpsProject.Shared.Models.Location;
 
 namespace DevOpsProject.Drone.API.Services;
@@ -34,12 +35,12 @@ public sealed class DroneGrpcService(
         
         routerService.AddOrUpdateConnection(
             new Connection(request.Id, ConnectionType.Hive, request.IpAddress, request.Http1Port, request.GrpcPort, request.UdpPort, request.Timestamp.ToDateTimeOffset()),
-            request.AliveConnectionNames);
+            request.Connections.Select(c => new ForeignConnection(c.Name, c.LastUpdatedAt.ToDateTimeOffset())));
         foreach (var drone in request.Drones)
         {
             routerService.AddOrUpdateConnection(
                 new Connection(drone.Id, ConnectionType.Drone, drone.IpAddress, drone.Http1Port, drone.GrpcPort, drone.UdpPort, drone.Timestamp.ToDateTimeOffset()),
-                drone.AliveConnectionNames);
+                drone.Connections.Select(c => new ForeignConnection(c.Name, c.LastUpdatedAt.ToDateTimeOffset())));
         }
         return Task.FromResult(new ConnectHiveResponse()
         {
@@ -82,7 +83,7 @@ public sealed class DroneGrpcService(
     {
         routerService.AddOrUpdateConnection(
             new Connection(request.Id, ConnectionType.Drone, request.IpAddress, request.Http1Port, request.GrpcPort, request.UdpPort, request.Timestamp.ToDateTimeOffset()),
-            request.AliveConnectionNames);
+            request.Connections.Select(c => new ForeignConnection(c.Name, c.LastUpdatedAt.ToDateTimeOffset())));
         return Task.FromResult(new ConnectDroneResponse()
         {
             Result = new Result()
@@ -139,12 +140,12 @@ public sealed class DroneGrpcService(
         });
     }
 
-    public override Task<SimulateDeadConnectionResponse> SimulateDeadConnection(SimulateDeadConnectionRequest request, ServerCallContext context)
+    public override Task<SimulateBadConnectionResponse> SimulateBadConnection(SimulateBadConnectionRequest request, ServerCallContext context)
     {
         var connection = routerService.GetConnectionOrNull(request.ConnectionName);
         if (connection == null)
         {
-            return Task.FromResult(new SimulateDeadConnectionResponse()
+            return Task.FromResult(new SimulateBadConnectionResponse()
             {
                 Result = new Result()
                 {
@@ -153,23 +154,23 @@ public sealed class DroneGrpcService(
             });
         }
         
-        var result = simulationUtility.AddIgnoredConnection(request.ConnectionName, request.Duration?.ToTimeSpan());
+        simulationUtility.SimulateBadConnection(new BadConnection(request.ConnectionName, request.Latency.ToTimeSpan(), request.Duration?.ToTimeSpan()));
 
-        return Task.FromResult(new SimulateDeadConnectionResponse()
+        return Task.FromResult(new SimulateBadConnectionResponse()
         {
             Result = new Result()
             {
-                IsSuccess = result
+                IsSuccess = true
             }
         });
     }
 
-    public override Task<StopDeadConnectionSimulationResponse> StopDeadConnectionSimulation(StopDeadConnectionSimulationRequest request, ServerCallContext context)
+    public override Task<StopBadConnectionSimulationResponse> StopBadConnectionSimulation(StopBadConnectionSimulationRequest request, ServerCallContext context)
     {
         var connection = routerService.GetConnectionOrNull(request.ConnectionName);
         if (connection == null)
         {
-            return Task.FromResult(new StopDeadConnectionSimulationResponse()
+            return Task.FromResult(new StopBadConnectionSimulationResponse()
             {
                 Result = new Result()
                 {
@@ -177,29 +178,19 @@ public sealed class DroneGrpcService(
                 }
             });
         }
-
-        if (!simulationUtility.IsIgnoredConnection(request.ConnectionName))
-        {
-            return Task.FromResult(new StopDeadConnectionSimulationResponse()
-            {
-                Result = new Result()
-                {
-                    Error = $"Drone connection '{droneState.Name}' does not undergo any simulations."
-                }
-            });
-        }
         
-        var result = simulationUtility.RemoveIgnoredConnection(request.ConnectionName);
+        var result = simulationUtility.StopBadConnectionSimulation(request.ConnectionName);
 
-        return Task.FromResult(new StopDeadConnectionSimulationResponse()
+        return Task.FromResult(new StopBadConnectionSimulationResponse()
         {
             Result = new Result()
             {
-                IsSuccess = result
+                IsSuccess = result,
+                Error = result ? null : $"Drone connection '{droneState.Name}' does not undergo any simulations."
             }
         });
     }
-
+    
     public override Task<MoveResponse> Move(MoveRequest request, ServerCallContext context)
     {
         droneService.StartMoving(new Location()
@@ -230,11 +221,11 @@ public sealed class DroneGrpcService(
         });
     }
 
-    public override Task<StopSendingNetworkStatusResponse> StopSendingNetworkStatus(StopSendingNetworkStatusRequest request, ServerCallContext context)
+    public override Task<SimulateBadDeviceResponse> SimulateBadDevice(SimulateBadDeviceRequest request, ServerCallContext context)
     {
-        simulationUtility.Stop(request.Duration?.ToTimeSpan());
+        simulationUtility.SimulateBadDevice(new BadDevice(request.Latency.ToTimeSpan(), request.Duration?.ToTimeSpan()));
 
-        return Task.FromResult(new StopSendingNetworkStatusResponse()
+        return Task.FromResult(new SimulateBadDeviceResponse()
         {
             Result = new Result()
             {
@@ -243,11 +234,11 @@ public sealed class DroneGrpcService(
         });
     }
 
-    public override Task<RestartSendingNetworkStatusResponse> RestartSendingNetworkStatus(RestartSendingNetworkStatusRequest request, ServerCallContext context)
+    public override Task<StopBadDeviceSimulationResponse> StopBadDeviceSimulation(StopBadDeviceSimulationRequest request, ServerCallContext context)
     {
-        simulationUtility.Restart();
+        simulationUtility.StopBadDeviceSimulation();
 
-        return Task.FromResult(new RestartSendingNetworkStatusResponse()
+        return Task.FromResult(new StopBadDeviceSimulationResponse()
         {
             Result = new Result()
             {

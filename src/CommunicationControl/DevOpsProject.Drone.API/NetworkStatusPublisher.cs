@@ -14,17 +14,11 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
 {
     protected override async Task PublishStatusAsync()
     {
-        if (simulationUtility.IsStopped)
-        {
-            return;
-        }
-
         var connection = routerService.GetConnectionOrNull(droneState.Name)
                          ?? throw new InvalidOperationException($"Drone connection '{droneState.Name}' does not exist");
 
         var tasks = routerService.GetConnections()
-            .Where(c => !simulationUtility.IsIgnoredConnection(c.Name))
-            .Select(c =>
+            .Select(async c =>
             {
                 var message = new NetworkStatus()
                 {
@@ -36,13 +30,28 @@ public sealed class NetworkStatusPublisher(ILogger<NetworkStatusPublisher> logge
                     UdpPort = connection.UdpPort,
                     SentAt = DateTimeOffset.UtcNow.ToTimestamp()
                 };
-                message.AliveConnectionNames.AddRange(routerService
+                message.Connections.AddRange(routerService
                     .GetConnections()
-                    .Where(conn => conn.State == ConnectionState.Alive)
-                    .Select(conn => conn.Name)
+                    .Select(conn => new ForeignConnection()
+                    {
+                        Name = conn.Name,
+                        LastUpdatedAt = conn.LastUpdatedAt.ToTimestamp(),
+                    })
                     .ToList());
+                
+                var simulationLatency = simulationUtility.BadDeviceLatency;
+                if (simulationLatency.HasValue)
+                {
+                    await Task.Delay(simulationLatency.Value);
+                }
                         
-                return udpService.SendMessageAsync(message, c.IpAddress, c.UdpPort);
+                var connectionSimulationLatency = simulationUtility.GetBadConnectionLatency(c.Name);
+                if (connectionSimulationLatency.HasValue)
+                {
+                    await Task.Delay(connectionSimulationLatency.Value);
+                }
+                
+                await udpService.SendMessageAsync(message, c.IpAddress, c.UdpPort);
             });
                 
         await Task.WhenAll(tasks);

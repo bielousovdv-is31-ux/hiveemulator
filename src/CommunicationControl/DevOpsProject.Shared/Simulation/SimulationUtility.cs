@@ -1,46 +1,40 @@
-﻿namespace DevOpsProject.Shared.Simulation;
+﻿using System.Collections.Concurrent;
+
+namespace DevOpsProject.Shared.Simulation;
 
 public sealed class SimulationUtility : ISimulationUtility
 {
-    public bool IsStopped => _isStoppedForever || (_stopTime.HasValue && _stopTime >= DateTimeOffset.UtcNow);
-    private bool _isStoppedForever;
-    private DateTimeOffset? _stopTime;
-    public IDictionary<string, DateTimeOffset?> IgnoredConnectionNames {get;} = new Dictionary<string, DateTimeOffset?>();
+    public TimeSpan? BadDeviceLatency => _badDevice is { IsActive: true }
+        ? _badDevice.Latency
+        : null;
+    private BadDevice _badDevice;
     
-    public void Stop(TimeSpan? duration)
-    {
-        if (duration.HasValue)
-        {
-            _isStoppedForever = false;
-            _stopTime = DateTimeOffset.UtcNow.Add(duration.Value);
-        }
-        else
-        {
-            _isStoppedForever = true;
-            _stopTime = null;
-        }
-    }
+    private readonly ConcurrentDictionary<string, BadConnection> _connections = new();
     
-    public void Restart()
+    public void SimulateBadDevice(BadDevice badDevice)
     {
-        _isStoppedForever = false;
-        _stopTime = null;
-    }
-    
-    public bool AddIgnoredConnection(string connectionName, TimeSpan? duration)
-    {
-        IgnoredConnectionNames[connectionName] = !duration.HasValue ? null : DateTimeOffset.UtcNow.Add(duration.Value);
-        return true;
+        _badDevice = badDevice;
     }
 
-    public bool RemoveIgnoredConnection(string connectionName)
+    public void StopBadDeviceSimulation()
     {
-        return IgnoredConnectionNames.Remove(connectionName);
+        _badDevice = null;
     }
 
-    public bool IsIgnoredConnection(string connectionName)
+    public bool StopBadConnectionSimulation(string connectionName)
     {
-        var containsName = IgnoredConnectionNames.TryGetValue(connectionName, out var ignoredConnection);
-        return containsName && (!ignoredConnection.HasValue || ignoredConnection.Value >= DateTimeOffset.UtcNow);
+        return _connections.TryRemove(connectionName, out _);
+    }
+
+    public TimeSpan? GetBadConnectionLatency(string connectionName)
+    {
+        var value = _connections.GetValueOrDefault(connectionName);
+        
+        return value is { IsActive: true } ? value.Latency : null;
+    }
+
+    public void SimulateBadConnection(BadConnection badConnection)
+    {
+        _connections[badConnection.Name] = badConnection;
     }
 }

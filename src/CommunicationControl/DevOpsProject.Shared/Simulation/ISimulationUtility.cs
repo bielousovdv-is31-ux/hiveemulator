@@ -2,10 +2,10 @@
 
 public interface ISimulationUtility
 {
-    bool IsStopped { get; }
-    void Stop(TimeSpan? duration = null);
-    void Restart();
-    bool RemoveIgnoredConnection(string connectionName);
-    bool IsIgnoredConnection(string connectionName);
-    bool AddIgnoredConnection(string connectionName, TimeSpan? duration = null);
+    TimeSpan? BadDeviceLatency { get; }
+    void SimulateBadDevice(BadDevice badDevice);
+    void StopBadDeviceSimulation();
+    bool StopBadConnectionSimulation(string connectionName);
+    TimeSpan? GetBadConnectionLatency(string connectionName);
+    void SimulateBadConnection(BadConnection badConnection);
 }

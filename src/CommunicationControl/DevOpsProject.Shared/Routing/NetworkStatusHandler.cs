@@ -2,6 +2,7 @@
 using DevOpsProject.Shared.Models;
 using Listener;
 using ConnectionType = DevOpsProject.Shared.Enums.ConnectionType;
+using ForeignConnection = DevOpsProject.Shared.Models.ForeignConnection;
 
 namespace DevOpsProject.Shared.Routing;
 
@@ -21,10 +22,10 @@ public sealed class NetworkStatusHandler(IRouterService routerService) : IUdpMes
             Http1Port = message.Http1Port,
             GrpcPort = message.GrpcPort,
             UdpPort = message.UdpPort,
-            LastUpdatedAt = DateTimeOffset.UtcNow
+            LastUpdatedAt = message.SentAt.ToDateTimeOffset()
         };
         
-        _ = routerService.TryUpdateConnection(connection, message.AliveConnectionNames.ToHashSet());
+        _ = routerService.TryUpdateConnection(connection, message.Connections.Select(c => new ForeignConnection(c.Name, c.LastUpdatedAt.ToDateTimeOffset())));
         return Task.CompletedTask;
     }
 }

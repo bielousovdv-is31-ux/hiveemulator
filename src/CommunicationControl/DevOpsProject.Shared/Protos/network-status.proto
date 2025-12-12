@@ -14,8 +14,14 @@ message NetworkStatus
   int32 http1Port = 4;
   int32 grpcPort = 5;
   int32 udpPort = 6;
-  repeated string aliveConnectionNames = 7;
+  repeated ForeignConnection connections = 7;
   google.protobuf.Timestamp sentAt = 8;
+}
+
+message ForeignConnection
+{
+  string name = 1;
+  google.protobuf.Timestamp lastUpdatedAt = 2;
 }
 
 enum ConnectionType

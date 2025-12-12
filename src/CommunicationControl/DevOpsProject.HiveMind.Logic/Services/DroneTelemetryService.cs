@@ -42,7 +42,6 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
     public void UpdateHiveMindLocation()
     {
         var values = _drones.Values
-            .Where(c => routerService.GetConnectionOrNull(Connection.GetName(c.Id, ConnectionType.Drone))?.State == ConnectionState.Alive)
             .ToList();
         if (values.Count == 0)
         {
@@ -68,7 +67,7 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
     {
         var currentTime = DateTimeOffset.UtcNow;
 
-        var hiveMindConnections = routerService.GetConnectedDevicesNames(Connection.GetName(communicationConfigurationOptions.Value.HiveID, ConnectionType.Hive));
+        var hiveMindConnections = routerService.GetConnectedDevices(Connection.GetName(communicationConfigurationOptions.Value.HiveID, ConnectionType.Hive));
         logger.LogInformation("[{Timestamp}] HiveMind {Id}: {State} Location: ({LocationLat:F6},{LocationLon:F6}) Destination: ({DestinationLat:F6},{DestinationLon:F6})", 
             currentTime, 
             communicationConfigurationOptions.Value.HiveID,
@@ -80,33 +79,33 @@ public sealed class DroneTelemetryService(IRouterService routerService, ILogger<
         logger.LogInformation("[{Timestamp}] HiveMind {Id} Connections: {ConnectionsNames}", 
             currentTime, 
             communicationConfigurationOptions.Value.HiveID,
-            string.Join(", ", hiveMindConnections));
+            string.Join(", ", hiveMindConnections.Select(c => $"{c.ConnectionName}:{currentTime - c.LastUpdatedAt}")));
         
         var drones = _drones.Values.OrderBy(d => d.Id).ToList();
         foreach (var drone in drones)
         {
             var connection = routerService.GetConnectionOrNull(Connection.GetName(drone.Id, ConnectionType.Drone));
             var connectedDevices =
-                routerService.GetConnectedDevicesNames(Connection.GetName(drone.Id, ConnectionType.Drone));
+                routerService.GetConnectedDevices(Connection.GetName(drone.Id, ConnectionType.Drone));
             if (connection is null)
             {
                 logger.LogWarning("[{Timestamp}] No connection found for {DroneId}.", currentTime, drone.Id);
                 continue;
             }
             
-            logger.LogInformation("[{Timestamp}] Drone {DroneId}, {DroneType}: {ConnectionStatus} {State} Location: ({LocationLat:F6},{LocationLon:F6}) Destination: ({DestinationLat:F6},{DestinationLon:F6}) Last updated at: {LastUpdatedAt}, Conn last updated at: {ConnectionLastUpdatedAt}", 
+            logger.LogInformation("[{Timestamp}] Drone {DroneId}, {DroneType}: {State} Next hop: {NextHop} Location: ({LocationLat:F6},{LocationLon:F6}) Destination: ({DestinationLat:F6},{DestinationLon:F6}) Last updated at: {LastUpdatedAt}, Conn last updated at: {ConnectionLastUpdatedAt}", 
                 currentTime, 
                 drone.Id,
                 drone.DroneType,
-                connection.State,
                 drone.State,
+                routerService.GetNextHop(connection.Name)?.Name,
                 drone.Location?.Latitude,
                 drone.Location?.Longitude,
                 drone.Destination?.Latitude,
                 drone.Destination?.Longitude,
                 drone.LastUpdatedAt,
                 connection.LastUpdatedAt);
-            logger.LogInformation("[{TimeStamp}] Drone {DroneId}: Connections: {ConnectionsNames}", currentTime, drone.Id, string.Join(", ", connectedDevices));
+            logger.LogInformation("[{TimeStamp}] Drone {DroneId}: Connections: {ConnectionsNames}", currentTime, drone.Id, string.Join(", ", connectedDevices.Select(c => $"{c.ConnectionName}:{currentTime - c.LastUpdatedAt}")));
         }
     }
 }

@@ -18,12 +18,12 @@ service DroneService
   rpc DisconnectDrone (DisconnectDroneRequest) returns (DisconnectDroneResponse);
   rpc Move (MoveRequest) returns (MoveResponse);
   rpc Stop (StopRequest) returns (StopResponse);
-  rpc SimulateDeadConnection (SimulateDeadConnectionRequest) returns (SimulateDeadConnectionResponse);
-  rpc StopDeadConnectionSimulation (StopDeadConnectionSimulationRequest) returns (StopDeadConnectionSimulationResponse);
+  rpc SimulateBadConnection (SimulateBadConnectionRequest) returns (SimulateBadConnectionResponse);
+  rpc StopBadConnectionSimulation (StopBadConnectionSimulationRequest) returns (StopBadConnectionSimulationResponse);
   rpc ConnectHive (ConnectHiveRequest) returns (ConnectHiveResponse);
   rpc DisconnectHive (DisconnectHiveRequest) returns (DisconnectHiveResponse);
-  rpc StopSendingNetworkStatus (StopSendingNetworkStatusRequest) returns (StopSendingNetworkStatusResponse);
-  rpc RestartSendingNetworkStatus (RestartSendingNetworkStatusRequest) returns (RestartSendingNetworkStatusResponse);
+  rpc SimulateBadDevice (SimulateBadDeviceRequest) returns (SimulateBadDeviceResponse);
+  rpc StopBadDeviceSimulation (StopBadDeviceSimulationRequest) returns (StopBadDeviceSimulationResponse);
 }
 
 message PingRequest
@@ -55,7 +55,7 @@ message ConnectDroneRequest
   int32 http1Port = 3;
   int32 grpcPort = 4;
   int32 udpPort = 5;
-  repeated string aliveConnectionNames = 6;
+  repeated ForeignConnection connections = 6;
   google.protobuf.Timestamp timestamp = 7;
 }
 
@@ -94,23 +94,24 @@ message StopResponse
   Result result = 1;
 }
 
-message SimulateDeadConnectionRequest
+message SimulateBadConnectionRequest
 {
   string connectionName = 1;
   google.protobuf.Duration duration = 2;
+  google.protobuf.Duration latency = 3;
 }
 
-message SimulateDeadConnectionResponse
+message SimulateBadConnectionResponse
 {
   Result result = 1;
 }
 
-message StopDeadConnectionSimulationRequest
+message StopBadConnectionSimulationRequest
 {
   string connectionName = 1;
 }
 
-message StopDeadConnectionSimulationResponse
+message StopBadConnectionSimulationResponse
 {
   Result result = 1;
 }
@@ -122,7 +123,7 @@ message ConnectHiveRequest
   int32 http1Port = 3;
   int32 grpcPort = 4;
   int32 udpPort = 5;
-  repeated string aliveConnectionNames = 6;
+  repeated ForeignConnection connections = 6;
   google.protobuf.Timestamp timestamp = 7;
   repeated ConnectDroneRequest drones = 8;
 }
@@ -143,22 +144,23 @@ message DisconnectHiveResponse
   Result result = 1;
 }
 
-message StopSendingNetworkStatusRequest
+message SimulateBadDeviceRequest
 {
   google.protobuf.Duration duration = 1;
+  google.protobuf.Duration latency = 2;
 }
 
-message StopSendingNetworkStatusResponse
+message SimulateBadDeviceResponse
 {
   Result result = 1;
 }
 
-message RestartSendingNetworkStatusRequest
+message StopBadDeviceSimulationRequest
 {
 
 }
 
-message RestartSendingNetworkStatusResponse
+message StopBadDeviceSimulationResponse
 {
   Result result = 1;
 }

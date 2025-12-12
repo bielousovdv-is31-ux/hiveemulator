@@ -8,8 +8,8 @@ public interface IDroneService
 {
     Task ConnectDroneAsync(string ipAddress, int port);
     Task DisconnectDroneAsync(string droneId, bool force);
-    Task SimulateDeadConnectionAsync(SimulateDeadConnectionCommand command);
-    Task StopDeadConnectionSimulationAsync(StopDeadConnectionSimulationCommand command);
+    Task SimulateDeadConnectionAsync(SimulateBadConnectionCommand command);
+    Task StopDeadConnectionSimulationAsync(StopBadConnectionSimulationCommand command);
     Task SimulateDroneStoppedOperatingAsync(SimulateDroneStoppedOperatingCommand command);
     Task StopDroneStoppedOperatingSimulationAsync(StopDroneStoppedOperatingSimulationCommand command);
     Task MoveToLocationAsync(Location destination);

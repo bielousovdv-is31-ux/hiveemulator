@@ -6,7 +6,7 @@ namespace DevOpsProject.HiveMind.Logic.Dto;
 public sealed record DroneDto(
     string Id, 
     DroneType Type, 
-    ConnectionState ConnectionState,
+    TimeSpan? CurrentLatency,
     Location? Location,
     DateTimeOffset TelemetryLastUpdatedAt,
     DroneState State,

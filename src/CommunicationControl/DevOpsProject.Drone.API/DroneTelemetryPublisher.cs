@@ -21,10 +21,6 @@ public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> log
             try
             {
                 await Task.Delay(options.Value.Delay, stoppingToken);
-                if (simulationUtility.IsStopped)
-                {
-                    continue;
-                }
                 
                 var hiveMindConnection = routerService.GetHiveMindConnection();
                 if (hiveMindConnection == null)
@@ -55,6 +51,12 @@ public sealed class DroneTelemetryPublisher(ILogger<DroneTelemetryPublisher> log
                     : null,
                     UdpDest = hiveMindConnection.Name
                 };
+
+                var simulationLatency = simulationUtility.BadDeviceLatency;
+                if (simulationLatency.HasValue)
+                {
+                    await Task.Delay(simulationLatency.Value, stoppingToken);
+                }
 
                 var nextHop = routerService.GetNextHop(hiveMindConnection.Name);
                 if (nextHop == null)

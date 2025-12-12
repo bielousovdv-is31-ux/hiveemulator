@@ -13,8 +13,20 @@ public sealed class SimulationGrpcInterceptor(ISimulationUtility simulationUtili
         UnaryServerMethod<TRequest, TResponse> continuation)
     {
         var previousHopHeader = context.RequestHeaders.FirstOrDefault(h => h.Key == RoutingConstants.PreviousHopHeaderName);
-        if ((previousHopHeader != null && simulationUtility.IsIgnoredConnection(previousHopHeader.Value)) || simulationUtility.IsStopped)
+        if (previousHopHeader != null)
         {
+            var simulationLatency = simulationUtility.BadDeviceLatency;
+            if (simulationLatency.HasValue)
+            {
+                await Task.Delay(simulationLatency.Value);
+            }
+            
+            var connectionSimulationLatency = simulationUtility.GetBadConnectionLatency(previousHopHeader.Value);
+            if (connectionSimulationLatency.HasValue)
+            {
+                await Task.Delay(connectionSimulationLatency.Value);
+            }
+            
             logger.LogWarning("Simulation - failing the connection.");
             throw new RpcException(new Status(StatusCode.Unavailable, "The service is currently unavailable. Please try again later."));
         }
