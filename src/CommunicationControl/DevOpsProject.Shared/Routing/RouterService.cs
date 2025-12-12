@@ -169,7 +169,7 @@ public sealed class RouterService : IRouterService
         }
     }
 
-    public void UpdateLatencies(Func<Connection, TimeSpan> getLatency)
+    public void UpdateLatencies(Func<Connection, (DateTimeOffset ServerTime, TimeSpan Latency)> getLatency)
     {
         _rwLock.EnterWriteLock();
         try
@@ -182,8 +182,13 @@ public sealed class RouterService : IRouterService
                     continue;
                 }
                 
-                var latency = getLatency(connection);
-                    
+                var latencyResult = getLatency(connection);
+
+                _connections[connection.Name] = _connections[connection.Name] with
+                {
+                    LastServerTime = latencyResult.ServerTime
+                };
+                
                 var currentConnectionIndex = _connectedDevices[_options.CurrentConnection.Name]
                     .FindIndex(c => c.ConnectionName == connection.Name);
 
@@ -191,7 +196,7 @@ public sealed class RouterService : IRouterService
                 {
                     _connectedDevices[_options.CurrentConnection.Name][currentConnectionIndex] = _connectedDevices[_options.CurrentConnection.Name][currentConnectionIndex] with
                     {
-                        LastLatency = latency
+                        LastLatency = latencyResult.Latency
                     };
                 }
             }

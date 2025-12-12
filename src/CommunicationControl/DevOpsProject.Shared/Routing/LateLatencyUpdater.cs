@@ -22,10 +22,10 @@ public sealed class LateLatencyUpdater(ILogger<LateLatencyUpdater> logger, IOpti
                     var delta = currentTime - c.LastUpdatedAt;
                     if (delta > options.Value.Delay.Add(routerServiceOptions.Value.AdditionalLateDelay))
                     {
-                        return currentTime - c.LastUpdatedAt;
+                        return (currentTime, currentTime - c.LastUpdatedAt);
                     }
 
-                    return c.Latency;
+                    return (c.LastServerTime, c.Latency);
                 });
             }
             catch (OperationCanceledException operationCanceledException) when (
