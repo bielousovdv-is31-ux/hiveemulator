@@ -8,4 +8,6 @@ public sealed class GrpcResilienceOptions
     public int MaxRetryAttempts {get; set;}
     [Required]
     public TimeSpan InitialDelay {get; set;}
+    [Required]
+    public TimeSpan MaxDeadline {get; set;}
 }

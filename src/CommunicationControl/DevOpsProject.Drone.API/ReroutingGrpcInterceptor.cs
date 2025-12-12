@@ -38,8 +38,6 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
             context.Method, 
             CreateMethodDefinition<TRequest, TResponse>);
         
-        var callOptions = new CallOptions(headers, context.Deadline, context.CancellationToken);
-        
         var retryPolicy = Policy
             .Handle<RpcException>(ex =>
                 ex.StatusCode == StatusCode.Unavailable ||
@@ -50,6 +48,8 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
 
         return await retryPolicy.ExecuteAsync(async () =>
         {
+            var callOptions = new CallOptions(headers, GetNewDeadline(context.Deadline), context.CancellationToken);
+            
             var destinationConnection = routerService.GetNextHop(destination);
             if (destinationConnection == null)
             {
@@ -106,5 +106,18 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
         }
 
         return (MessageParser)property.GetValue(null)!;
+    }
+
+    private DateTime GetNewDeadline(DateTime contextDeadline)
+    {
+        var currentTime = DateTime.UtcNow;
+        var reroutingDeadline = currentTime.Add(options.Value.MaxDeadline);
+        
+        if (contextDeadline == DateTime.MaxValue)
+            return reroutingDeadline;
+        
+        return contextDeadline < reroutingDeadline
+            ? contextDeadline
+            : reroutingDeadline;
     }
 }
