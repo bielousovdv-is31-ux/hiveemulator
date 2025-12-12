@@ -27,7 +27,8 @@ public static class GrpcConfiguration
                     .Handle<RpcException>(ex =>
                         ex.StatusCode == StatusCode.Unavailable ||
                         ex.StatusCode == StatusCode.Aborted ||
-                        ex.StatusCode == StatusCode.ResourceExhausted),
+                        ex.StatusCode == StatusCode.ResourceExhausted ||
+                        ex.StatusCode == StatusCode.DeadlineExceeded),
         
                 MaxRetryAttempts = options.MaxRetryAttempts,
                 Delay = options.InitialDelay,
@@ -36,6 +37,12 @@ public static class GrpcConfiguration
             });
         });
         services.AddSingleton<LogExceptionInterceptor>();
+        
+        services.AddOptions<DeadlineInterceptorOptions>()
+            .BindConfiguration("DeadlineInterceptorOptions")
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddSingleton<DeadlineInterceptor>();
         
         return services;
     }

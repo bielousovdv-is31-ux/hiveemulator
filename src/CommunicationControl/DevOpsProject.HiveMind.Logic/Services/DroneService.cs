@@ -34,7 +34,8 @@ public sealed class DroneService(
     IOptions<HiveCommunicationConfig> communicationConfigurationOptions,
     ILogger<DroneService> logger,
     ISimulationUtility simulationUtility,
-    ResiliencePipelineProvider<string> provider) : IDroneService
+    ResiliencePipelineProvider<string> provider,
+    DeadlineInterceptor deadlineInterceptor) : IDroneService
 {
     private readonly ResiliencePipeline _pipeline = provider.GetPipeline("grpc-retry");
     
@@ -45,7 +46,8 @@ public sealed class DroneService(
             Port = port
         };
         var channel = grpcChannelFactory.Create(new Uri(uriBuilder.ToString()));
-        var client = new Shared.Grpc.DroneService.DroneServiceClient(channel);
+        var callInvoker = channel.Intercept(deadlineInterceptor);
+        var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
         PingResponse pingResponse;
         try
@@ -141,7 +143,7 @@ public sealed class DroneService(
             }));
         request.Drones.AddRange(connectDronesRequests);
         
-        var callInvoker = channel.Intercept(logExceptionInterceptor);
+        var callInvoker = channel.Intercept(deadlineInterceptor, logExceptionInterceptor);
         var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
         try
         {
@@ -240,7 +242,7 @@ public sealed class DroneService(
                 }
 
                 var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
-                var callInvoker = channel.Intercept(logExceptionInterceptor);
+                var callInvoker = channel.Intercept(deadlineInterceptor, logExceptionInterceptor);
                 var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
                 var request = new DisconnectHiveRequest()
@@ -339,7 +341,7 @@ public sealed class DroneService(
                 }
 
                 var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
-                var callInvoker = channel.Intercept(logExceptionInterceptor);
+                var callInvoker = channel.Intercept(deadlineInterceptor, logExceptionInterceptor);
                 var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
                 return await client.SimulateBadConnectionAsync(new SimulateBadConnectionRequest()
@@ -401,7 +403,7 @@ public sealed class DroneService(
     private async Task SendStopDeadConnectionSimulationAsync(Connection sendTo, string connectionName)
     {
         var channel = grpcChannelFactory.Create(sendTo.GrpcUri);
-        var callInvoker = channel.Intercept(logExceptionInterceptor);
+        var callInvoker = channel.Intercept(deadlineInterceptor, logExceptionInterceptor);
         var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
         try
@@ -443,7 +445,7 @@ public sealed class DroneService(
                 }
 
                 var channel = grpcChannelFactory.Create(nextHop.GrpcUri);
-                var callInvoker = channel.Intercept(logExceptionInterceptor);
+                var callInvoker = channel.Intercept(deadlineInterceptor, logExceptionInterceptor);
                 var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
                 return await client.SimulateBadDeviceAsync(new SimulateBadDeviceRequest()
@@ -473,7 +475,7 @@ public sealed class DroneService(
         }
         
         var channel = grpcChannelFactory.Create(connection.GrpcUri);
-        var callInvoker = channel.Intercept(logExceptionInterceptor);
+        var callInvoker = channel.Intercept(deadlineInterceptor, logExceptionInterceptor);
         var client = new Shared.Grpc.DroneService.DroneServiceClient(callInvoker);
 
         try
@@ -558,7 +560,7 @@ public sealed class DroneService(
 
                     var connectionChannel = grpcChannelFactory.Create(nextHop.GrpcUri);
                     var connectionCallInvoker =
-                        connectionChannel.Intercept(logExceptionInterceptor);
+                        connectionChannel.Intercept(deadlineInterceptor, logExceptionInterceptor);
                     var connectionClient = new Shared.Grpc.DroneService.DroneServiceClient(connectionCallInvoker);
                     await send(connectionClient, c);
                 });

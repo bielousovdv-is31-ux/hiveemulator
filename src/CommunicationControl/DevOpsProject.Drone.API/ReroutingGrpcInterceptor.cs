@@ -44,7 +44,8 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
             .Handle<RpcException>(ex =>
                 ex.StatusCode == StatusCode.Unavailable ||
                 ex.StatusCode == StatusCode.ResourceExhausted ||
-                ex.StatusCode == StatusCode.Aborted)
+                ex.StatusCode == StatusCode.Aborted ||
+                ex.StatusCode == StatusCode.DeadlineExceeded)
             .WaitAndRetryAsync(options.Value.MaxRetryAttempts, i => options.Value.InitialDelay * Math.Pow(2, i));
 
         return await retryPolicy.ExecuteAsync(async () =>
