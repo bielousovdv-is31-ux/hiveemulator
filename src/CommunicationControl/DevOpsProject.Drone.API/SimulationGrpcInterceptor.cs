@@ -18,17 +18,16 @@ public sealed class SimulationGrpcInterceptor(ISimulationUtility simulationUtili
             var simulationLatency = simulationUtility.BadDeviceLatency;
             if (simulationLatency.HasValue)
             {
+                logger.LogWarning($"Simulation - drone delay {simulationLatency.Value}.");
                 await Task.Delay(simulationLatency.Value);
             }
             
             var connectionSimulationLatency = simulationUtility.GetBadConnectionLatency(previousHopHeader.Value);
             if (connectionSimulationLatency.HasValue)
             {
+                logger.LogWarning($"Simulation - connection delay {connectionSimulationLatency.Value}.");
                 await Task.Delay(connectionSimulationLatency.Value);
             }
-            
-            logger.LogWarning("Simulation - failing the connection.");
-            throw new RpcException(new Status(StatusCode.Unavailable, "The service is currently unavailable. Please try again later."));
         }
         
         return await continuation(request, context);
