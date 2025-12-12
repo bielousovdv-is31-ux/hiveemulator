@@ -410,7 +410,7 @@ public sealed class DroneService(
                 new StopBadConnectionSimulationRequest
                 {
                     ConnectionName = connectionName
-                }, GetMetadata(), cancellationToken: ct));
+                }, GetMetadata(setPrevious: false), cancellationToken: ct));
             if (!result.Result.IsSuccess)
             {
                 logger.LogError("Simulation stop failed on connection {ConnectionName} {Result}.", sendTo.Name, result);
@@ -481,7 +481,7 @@ public sealed class DroneService(
             var result = await _pipeline
                 .ExecuteAsync(async ct =>
                     await client.StopBadDeviceSimulationAsync(new StopBadDeviceSimulationRequest(),
-                        headers: GetMetadata(), cancellationToken: ct));
+                        headers: GetMetadata(setPrevious: false), cancellationToken: ct));
             if (!result.Result.IsSuccess)
             {
                 throw new DroneRequestFailedException(result.Result.Error);
@@ -572,12 +572,13 @@ public sealed class DroneService(
         await Task.WhenAll(tasks);
     }
 
-    private Metadata GetMetadata(string destinationName = null)
+    private Metadata GetMetadata(string destinationName = null, bool setPrevious = true)
     {
-        var metadata = new Metadata()
+        var metadata = new Metadata();
+        if (setPrevious)
         {
-            { RoutingConstants.PreviousHopHeaderName, routerService.GetCurrentConnection().Name }
-        };
+            metadata.Add(RoutingConstants.PreviousHopHeaderName, routerService.GetCurrentConnection().Name);
+        }
         if (!string.IsNullOrEmpty(destinationName))
         {
             metadata.Add(RoutingConstants.DestinationHeaderName, destinationName);
