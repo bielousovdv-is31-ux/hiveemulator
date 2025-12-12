@@ -10,8 +10,8 @@
         DeleteInterference,
         AddDrone,
         DeleteDrone,
-        SimulateDeadConnection,
-        StopDeadConnectionSimulation,
+        SimulateBadConnection,
+        StopBadConnectionSimulation,
         SimulateDroneStoppedOperating,
         StopDroneStoppedOperatingSimulation,
     }
