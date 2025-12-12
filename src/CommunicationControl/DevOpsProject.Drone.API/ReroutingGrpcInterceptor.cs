@@ -128,9 +128,6 @@ public sealed class ReroutingGrpcInterceptor(IGrpcChannelFactory grpcChannelFact
         var currentTime = DateTime.UtcNow;
         var reroutingDeadline = currentTime.Add(options.Value.MaxDeadline);
         
-        if (contextDeadline == DateTime.MaxValue)
-            return reroutingDeadline;
-        
         return contextDeadline < reroutingDeadline
             ? contextDeadline
             : reroutingDeadline;
