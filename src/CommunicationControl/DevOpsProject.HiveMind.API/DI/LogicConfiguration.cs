@@ -19,10 +19,10 @@ namespace DevOpsProject.HiveMind.API.DI
             serviceCollection.AddTransient<ICommandHandler<DeleteInterferenceFromHiveMindCommand>, DeleteInterferenceFromHiveMindCommandHandler>();
             serviceCollection.AddTransient<ICommandHandler<AddDroneCommand>, AddDroneCommandHandler>();
             serviceCollection.AddTransient<ICommandHandler<DeleteDroneCommand>, DeleteDroneCommandHandler>();
-            serviceCollection.AddTransient<ICommandHandler<SimulateBadConnectionCommand>, SimulateDeadConnectionCommandHandler>();
-            serviceCollection.AddTransient<ICommandHandler<StopBadConnectionSimulationCommand>, StopDeadConnectionSimulationCommandHandler>();
-            serviceCollection.AddTransient<ICommandHandler<SimulateDroneStoppedOperatingCommand>, SimulateDroneStoppedOperatingCommandHandler>();
-            serviceCollection.AddTransient<ICommandHandler<StopDroneStoppedOperatingSimulationCommand>, StopDroneStoppedOperatingSimulationCommandHandler>();
+            serviceCollection.AddTransient<ICommandHandler<SimulateBadConnectionCommand>, SimulateBadConnectionCommandHandler>();
+            serviceCollection.AddTransient<ICommandHandler<StopBadConnectionSimulationCommand>, StopBadConnectionSimulationCommandHandler>();
+            serviceCollection.AddTransient<ICommandHandler<SimulateBadDroneCommand>, SimulateBadDroneCommandHandler>();
+            serviceCollection.AddTransient<ICommandHandler<StopBadDroneSimulationCommand>, StopBadDroneSimulationCommandHandler>();
             serviceCollection.AddTransient<ICommandHandlerFactory, CommandHandlerFactory>();
 
             serviceCollection.AddTransient<IHiveMindService, HiveMindService>();

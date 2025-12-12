@@ -279,7 +279,7 @@ public sealed class DroneService(
         });
     }
     
-    public async Task SimulateDeadConnectionAsync(SimulateBadConnectionCommand command)
+    public async Task SimulateBadConnectionAsync(SimulateBadConnectionCommand command)
     {
         var (connection1, connection2) = (routerService.GetConnectionOrNull(command.Connection1Name), routerService.GetConnectionOrNull(command.Connection2Name));
 
@@ -360,7 +360,7 @@ public sealed class DroneService(
         }
     }
 
-    public async Task StopDeadConnectionSimulationAsync(StopBadConnectionSimulationCommand command)
+    public async Task StopBadConnectionSimulationAsync(StopBadConnectionSimulationCommand command)
     {
         var (connection1, connection2) = (routerService.GetConnectionOrNull(command.Connection1Name), routerService.GetConnectionOrNull(command.Connection2Name));
 
@@ -421,7 +421,7 @@ public sealed class DroneService(
         }
     }
     
-    public async Task SimulateDroneStoppedOperatingAsync(SimulateDroneStoppedOperatingCommand command)
+    public async Task SimulateBadDroneAsync(SimulateBadDroneCommand command)
     {
         var connection = routerService.GetConnectionOrNull(Connection.GetName(command.DroneId, ConnectionType.Drone));
         if (connection == null)
@@ -461,9 +461,9 @@ public sealed class DroneService(
         }
     }
 
-    public async Task StopDroneStoppedOperatingSimulationAsync(StopDroneStoppedOperatingSimulationCommand command)
+    public async Task StopBadDroneSimulationAsync(StopBadDroneSimulationCommand simulationCommand)
     {
-        var connection = routerService.GetConnectionOrNull(Connection.GetName(command.DroneId, ConnectionType.Drone));
+        var connection = routerService.GetConnectionOrNull(Connection.GetName(simulationCommand.DroneId, ConnectionType.Drone));
         if (connection == null)
         {
             throw new DroneRequestFailedException("Drone was not found.");

@@ -13,8 +13,8 @@ namespace DevOpsProject.Shared.Models.HiveMindCommands
     [JsonDerivedType(typeof(DeleteDroneCommand), nameof(HiveMindState.DeleteDrone))]
     [JsonDerivedType(typeof(SimulateBadConnectionCommand), nameof(HiveMindState.SimulateBadConnection))]
     [JsonDerivedType(typeof(StopBadConnectionSimulationCommand), nameof(HiveMindState.StopBadConnectionSimulation))]
-    [JsonDerivedType(typeof(SimulateDroneStoppedOperatingCommand), nameof(HiveMindState.SimulateDroneStoppedOperating))]
-    [JsonDerivedType(typeof(StopDroneStoppedOperatingSimulationCommand), nameof(HiveMindState.StopDroneStoppedOperatingSimulation))]
+    [JsonDerivedType(typeof(SimulateBadDroneCommand), nameof(HiveMindState.SimulateBadDrone))]
+    [JsonDerivedType(typeof(StopBadDroneSimulationCommand), nameof(HiveMindState.StopBadDroneSimulation))]
     public class HiveMindCommand
     {
         public HiveMindState CommandType { get; set; }

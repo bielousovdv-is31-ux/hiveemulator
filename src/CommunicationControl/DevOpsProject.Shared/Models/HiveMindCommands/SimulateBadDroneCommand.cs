@@ -1,6 +1,6 @@
 ﻿namespace DevOpsProject.Shared.Models.HiveMindCommands;
 
-public class SimulateDroneStoppedOperatingCommand : HiveMindCommand
+public class SimulateBadDroneCommand : HiveMindCommand
 {
     public string DroneId { get; set; }
     public TimeSpan? Duration { get; set; }

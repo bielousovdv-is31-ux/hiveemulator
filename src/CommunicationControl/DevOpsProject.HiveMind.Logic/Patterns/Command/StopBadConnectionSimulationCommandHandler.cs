@@ -4,10 +4,10 @@ using DevOpsProject.Shared.Models.HiveMindCommands;
 
 namespace DevOpsProject.HiveMind.Logic.Patterns.Command;
 
-public sealed class StopDeadConnectionSimulationCommandHandler(IDroneService droneService) : ICommandHandler<StopBadConnectionSimulationCommand>
+public sealed class StopBadConnectionSimulationCommandHandler(IDroneService droneService) : ICommandHandler<StopBadConnectionSimulationCommand>
 {
     public async Task HandleAsync(StopBadConnectionSimulationCommand command)
     {
-        await droneService.StopDeadConnectionSimulationAsync(command);
+        await droneService.StopBadConnectionSimulationAsync(command);
     }
 }
