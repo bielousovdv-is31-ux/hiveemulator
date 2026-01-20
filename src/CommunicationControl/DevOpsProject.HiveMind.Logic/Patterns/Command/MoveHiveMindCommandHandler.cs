@@ -6,18 +6,16 @@ namespace DevOpsProject.HiveMind.Logic.Patterns.Command
 {
     public class MoveHiveMindCommandHandler : ICommandHandler<MoveHiveMindCommand>
     {
-        private readonly IHiveMindMovingService _hiveMindMovingService;
+        private readonly IDroneService _droneService;
 
-        public MoveHiveMindCommandHandler(IHiveMindMovingService hiveMindMovingService)
+        public MoveHiveMindCommandHandler(IDroneService droneService)
         {
-            _hiveMindMovingService = hiveMindMovingService;
+            _droneService = droneService;
         }
 
         public async Task HandleAsync(MoveHiveMindCommand command)
         {
-
-            _hiveMindMovingService.MoveToLocation(command.Destination);
-            await Task.CompletedTask;
+            await _droneService.MoveToLocationAsync(command.Destination);
         }
     }
 }

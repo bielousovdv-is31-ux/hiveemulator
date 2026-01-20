@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using DevOpsProject.HiveMind.API.DI;
@@ -5,11 +6,8 @@ using DevOpsProject.HiveMind.API.Middleware;
 using DevOpsProject.HiveMind.Logic.Patterns.Factory.Interfaces;
 using DevOpsProject.HiveMind.Logic.Services.Interfaces;
 using DevOpsProject.Shared.Configuration;
-using DevOpsProject.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 using DevOpsProject.Shared.Models.HiveMindCommands;
-using FluentValidation;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -20,6 +18,11 @@ builder.Host.UseSerilog((context, services, loggerConfig) =>
     loggerConfig.ReadFrom.Configuration(context.Configuration)
                 .ReadFrom.Services(services)
                 .Enrich.FromLogContext());
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 builder.Services.AddApiVersioningConfiguration();
 
@@ -42,6 +45,9 @@ builder.Services.AddCorsConfiguration(corsPolicyName);
 
 builder.Services.AddExceptionHandler<ExceptionHandlingMiddleware>();
 builder.Services.AddProblemDetails();
+
+builder.Services.AddGrpcServices();
+builder.Services.AddMeshNetworkConfiguration(builder.Configuration);
 
 var app = builder.Build();
 
@@ -92,6 +98,14 @@ groupBuilder.MapPost("command", async (HiveMindCommand command, [FromServices]IC
     var handler = factory.GetHandler(command);
     await handler.HandleAsync(command);
     return Results.Ok();
+});
+
+groupBuilder.MapGet("drones", ([FromServices] IDroneService droneService) => Results.Ok(droneService.GetDrones()));
+
+groupBuilder.MapGet("drones/{id}", ([FromRoute] string id, [FromServices] IDroneService droneService) =>
+{
+    var result = droneService.GetDrone(id);
+    return result == null ? Results.NotFound() : Results.Ok(result);
 });
 
 app.Run();

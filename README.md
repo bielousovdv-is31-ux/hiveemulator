@@ -47,6 +47,25 @@ cd src/CommunicationControl
 dotnet run  --project DevOpsProject.HiveMind.API/DevOpsProject.HiveMind.API.csproj
 ```
 
+### Drone
+```bash
+cd src/CommunicationControl
+
+$env:IP_ADDRESS = "127.0.0.1"
+$env:UDP_PORT = 5382
+dotnet run --no-launch-profile --project DevOpsProject.Drone.API/DevOpsProject.Drone.API.csproj --urls="http://localhost:5282" -- DroneInitialState:Id="1"
+```
+
+You can deploy the second drone in another terminal window in the following way:
+```bash
+cd src/CommunicationControl
+
+$env:IP_ADDRESS = "127.0.0.1"
+$env:UDP_PORT = 5383
+dotnet run --no-launch-profile --project DevOpsProject.Drone.API/DevOpsProject.Drone.API.csproj --urls="http://localhost:5283" -- DroneInitialState:Id="2" DroneInitialState:Type="Striker" DroneInitialState:Location:Latitude=48.7 DroneInitialState:Location:Longitude=38
+
+```
+
 
 ## Usage
 

@@ -1,0 +1,164 @@
+syntax = "proto3";
+
+option csharp_namespace = "DevOpsProject.Shared.Grpc";
+
+package shared;
+
+import "network-status.proto";
+import "result.proto";
+import "location.proto";
+import "drone-telemetry.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+service DroneService
+{
+  rpc Ping (PingRequest) returns (PingResponse);
+  rpc ConnectDrone (ConnectDroneRequest) returns (ConnectDroneResponse);
+  rpc DisconnectDrone (DisconnectDroneRequest) returns (DisconnectDroneResponse);
+  rpc Move (MoveRequest) returns (MoveResponse);
+  rpc Stop (StopRequest) returns (StopResponse);
+  rpc SimulateDeadConnection (SimulateDeadConnectionRequest) returns (SimulateDeadConnectionResponse);
+  rpc StopDeadConnectionSimulation (StopDeadConnectionSimulationRequest) returns (StopDeadConnectionSimulationResponse);
+  rpc ConnectHive (ConnectHiveRequest) returns (ConnectHiveResponse);
+  rpc DisconnectHive (DisconnectHiveRequest) returns (DisconnectHiveResponse);
+  rpc StopSendingNetworkStatus (StopSendingNetworkStatusRequest) returns (StopSendingNetworkStatusResponse);
+  rpc RestartSendingNetworkStatus (RestartSendingNetworkStatusRequest) returns (RestartSendingNetworkStatusResponse);
+}
+
+message PingRequest
+{
+  
+}
+
+message PingResponse
+{
+  string id = 1;
+  ConnectionType type = 2;
+  string ipAddress = 3;
+  int32 http1Port = 4;
+  int32 grpcPort = 5;
+  int32 udpPort = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  Location location = 8;
+  float speed = 9;
+  float height = 10;
+  DroneType droneType = 11;
+  DroneState state = 12;
+  Location destination = 13;
+}
+
+message ConnectDroneRequest
+{
+  string id = 1;
+  string ipAddress = 2;
+  int32 http1Port = 3;
+  int32 grpcPort = 4;
+  int32 udpPort = 5;
+  repeated string aliveConnectionNames = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+message ConnectDroneResponse
+{
+    Result result = 1;
+}
+
+message DisconnectDroneRequest
+{
+  string id = 1;
+}
+
+message DisconnectDroneResponse
+{
+  Result result = 1;
+}
+
+message MoveRequest
+{
+  Location destination = 1;
+}
+
+message MoveResponse
+{
+  Result result = 1;
+}
+
+message StopRequest
+{
+  
+}
+
+message StopResponse
+{
+  Result result = 1;
+}
+
+message SimulateDeadConnectionRequest
+{
+  string connectionName = 1;
+  google.protobuf.Duration duration = 2;
+}
+
+message SimulateDeadConnectionResponse
+{
+  Result result = 1;
+}
+
+message StopDeadConnectionSimulationRequest
+{
+  string connectionName = 1;
+}
+
+message StopDeadConnectionSimulationResponse
+{
+  Result result = 1;
+}
+
+message ConnectHiveRequest
+{
+  string id = 1;
+  string ipAddress = 2;
+  int32 http1Port = 3;
+  int32 grpcPort = 4;
+  int32 udpPort = 5;
+  repeated string aliveConnectionNames = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  repeated ConnectDroneRequest drones = 8;
+}
+
+message ConnectHiveResponse
+{
+  Result result = 1;
+}
+
+message DisconnectHiveRequest
+{
+  string id = 1;
+  repeated string droneIds = 2;
+}
+
+message DisconnectHiveResponse
+{
+  Result result = 1;
+}
+
+message StopSendingNetworkStatusRequest
+{
+  google.protobuf.Duration duration = 1;
+}
+
+message StopSendingNetworkStatusResponse
+{
+  Result result = 1;
+}
+
+message RestartSendingNetworkStatusRequest
+{
+
+}
+
+message RestartSendingNetworkStatusResponse
+{
+  Result result = 1;
+}

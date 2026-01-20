@@ -7,6 +7,12 @@
         Move,
         Error,
         SetInterference,
-        DeleteInterference
+        DeleteInterference,
+        AddDrone,
+        DeleteDrone,
+        SimulateDeadConnection,
+        StopDeadConnectionSimulation,
+        SimulateDroneStoppedOperating,
+        StopDroneStoppedOperatingSimulation,
     }
 }

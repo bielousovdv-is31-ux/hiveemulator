@@ -1,0 +1,11 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "DevOpsProject.Shared.Grpc";
+
+package shared;
+
+message Location
+{
+  double latitude = 1;
+  double longitude = 2;
+}

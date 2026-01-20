@@ -1,0 +1,12 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "DevOpsProject.Shared.Grpc";
+import "google/protobuf/wrappers.proto";
+
+package shared;
+
+message Result
+{
+  bool isSuccess = 1;
+  google.protobuf.StringValue error = 2;
+}
