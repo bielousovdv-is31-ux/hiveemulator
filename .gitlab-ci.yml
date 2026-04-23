@@ -1,37 +1,88 @@
 stages:
-  - build
   - docker
+  - deploy
 
 variables:
-  IMAGE_TAG: $CI_REGISTRY_IMAGE/communication-control:$CI_COMMIT_SHA
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_HOST: tcp://docker:2376
 
-build:
-  stage: build
-  image: mcr.microsoft.com/dotnet/sdk:8.0
-  script:
-    - cd src/CommunicationControl
-    - dotnet publish -c Release -p:PublishProfile=FolderProfile -o ./published DevOpsProject/DevOpsProject.CommunicationControl.API.csproj
-  artifacts:
-    paths:
-      - src/CommunicationControl/published
+  API_IMAGE_DEV: $CI_REGISTRY_IMAGE/communication-control:dev
+  UI_IMAGE_DEV: $CI_REGISTRY_IMAGE/map-client:dev
+  API_IMAGE_MAIN: $CI_REGISTRY_IMAGE/communication-control:main
+  UI_IMAGE_MAIN: $CI_REGISTRY_IMAGE/map-client:main
 
-docker:
-  stage: docker
-  image: docker:latest
+default:
+  image: docker:24.0.5-cli
   services:
-    - docker:dind
+    - docker:24.0.5-dind
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+
+docker_dev_api:
+  stage: docker
   script:
-    - if [ "${CI_COMMIT_REF_NAME}" = "main" ];
-      then
-      export DOCKER_IMAGE_TAG=latest;
-      elif [-v "${CI_COMMIT_TAG}"];
-      then
-      export DOCKER_IMAGE_TAG=["CI_COMMIT_TAG"];
-      else
-      export DOCKER_IMAGE_TAG=${CI_COMMIT_REF_NAME};
-      fi
-    - cd src/CommunicationControl
-    - docker build -t ${CI_REGISTRY}/kzotkin/hiveemulator/communication-control:${DOCKER_IMAGE_TAG} -f  /DevOpsProject/Dockerfile .
-    - docker push $IMAGE_TAG
+    - docker build --pull -t $API_IMAGE_DEV -f Dockerfile_API .
+    - docker push $API_IMAGE_DEV
+  only:
+    - dev
+
+docker_dev_ui:
+  stage: docker
+  script:
+    - docker build --pull -t $UI_IMAGE_DEV -f Dockerfile_UI .
+    - docker push $UI_IMAGE_DEV
+  only:
+    - dev
+
+docker_main_api:
+  stage: docker
+  script:
+    - docker build --pull -t $API_IMAGE_MAIN -f Dockerfile_API .
+    - docker push $API_IMAGE_MAIN
+  only:
+    - main
+
+docker_main_ui:
+  stage: docker
+  script:
+    - docker build --pull -t $UI_IMAGE_MAIN -f Dockerfile_UI .
+    - docker push $UI_IMAGE_MAIN
+  only:
+    - main
+
+deploy_dev:
+  stage: deploy
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache sshpass openssh-client
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H "$DEV_SERVER_IP" >> ~/.ssh/known_hosts
+  script:
+    - |
+      sshpass -p "$DEV_SERVER_PASSWORD" ssh "$DEV_SERVER_USER@$DEV_SERVER_IP" '
+        echo "'$CI_REGISTRY_PASSWORD'" | docker login registry.gitlab.com -u "'$CI_REGISTRY_USER'" --password-stdin &&
+        cd /home/deploy/dev-app &&
+        docker-compose pull &&
+        docker-compose up -d
+      '
+  only:
+    - dev
+
+deploy_main:
+  stage: deploy
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache sshpass openssh-client
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H "$PROD_SERVER_IP" >> ~/.ssh/known_hosts
+  script:
+    - |
+      sshpass -p "$PROD_SERVER_PASSWORD" ssh "$PROD_SERVER_USER@$PROD_SERVER_IP" '
+        echo "'$CI_REGISTRY_PASSWORD'" | docker login registry.gitlab.com -u "'$CI_REGISTRY_USER'" --password-stdin &&
+        cd /home/deploy/prod-app &&
+        docker-compose pull &&
+        docker-compose up -d
+      '
+  when: manual
+  only:
+    - main
