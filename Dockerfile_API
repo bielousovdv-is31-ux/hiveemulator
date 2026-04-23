@@ -1,0 +1,22 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN git clone https://gitlab.com/mikhrin.e.o.is33/hiveemulator.git .
+
+WORKDIR /src/src/CommunicationControl
+RUN dotnet restore DevOpsProject/DevOpsProject.CommunicationControl.API.csproj
+RUN dotnet publish DevOpsProject/DevOpsProject.CommunicationControl.API.csproj -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+
+RUN groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
+
+COPY --from=build --chown=appuser:appuser /app/publish ./
+
+USER appuser
+
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "DevOpsProject.CommunicationControl.API.dll"]

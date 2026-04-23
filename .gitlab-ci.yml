@@ -17,11 +17,13 @@ default:
     - name: docker:24.0.5-dind
       alias: docker
 
+.docker_login: &docker_login
+  - docker info
+  - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+
 docker_dev_api:
   stage: docker
-  before_script:
-    - docker info
-    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  before_script: *docker_login
   script:
     - docker build --pull -t "$API_IMAGE_DEV" -f Dockerfile_API .
     - docker push "$API_IMAGE_DEV"
@@ -30,9 +32,7 @@ docker_dev_api:
 
 docker_dev_ui:
   stage: docker
-  before_script:
-    - docker info
-    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  before_script: *docker_login
   script:
     - docker build --pull -t "$UI_IMAGE_DEV" -f Dockerfile_UI .
     - docker push "$UI_IMAGE_DEV"
@@ -41,9 +41,7 @@ docker_dev_ui:
 
 docker_main_api:
   stage: docker
-  before_script:
-    - docker info
-    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  before_script: *docker_login
   script:
     - docker build --pull -t "$API_IMAGE_MAIN" -f Dockerfile_API .
     - docker push "$API_IMAGE_MAIN"
@@ -52,11 +50,46 @@ docker_main_api:
 
 docker_main_ui:
   stage: docker
-  before_script:
-    - docker info
-    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  before_script: *docker_login
   script:
     - docker build --pull -t "$UI_IMAGE_MAIN" -f Dockerfile_UI .
     - docker push "$UI_IMAGE_MAIN"
+  only:
+    - main
+
+deploy_dev:
+  stage: deploy
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache sshpass openssh-client
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H "$DEV_SERVER_IP" >> ~/.ssh/known_hosts
+  script:
+    - |
+      sshpass -p "$DEV_SERVER_PASSWORD" ssh "$DEV_SERVER_USER@$DEV_SERVER_IP" '
+        echo "'$CI_REGISTRY_PASSWORD'" | docker login registry.gitlab.com -u "'$CI_REGISTRY_USER'" --password-stdin &&
+        cd /home/deploy/dev-app &&
+        docker-compose pull &&
+        docker-compose up -d
+      '
+  only:
+    - dev
+
+deploy_main:
+  stage: deploy
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache sshpass openssh-client
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H "$PROD_SERVER_IP" >> ~/.ssh/known_hosts
+  script:
+    - |
+      sshpass -p "$PROD_SERVER_PASSWORD" ssh "$PROD_SERVER_USER@$PROD_SERVER_IP" '
+        echo "'$CI_REGISTRY_PASSWORD'" | docker login registry.gitlab.com -u "'$CI_REGISTRY_USER'" --password-stdin &&
+        cd /home/deploy/prod-app &&
+        docker-compose pull &&
+        docker-compose up -d
+      '
+  when: manual
   only:
     - main

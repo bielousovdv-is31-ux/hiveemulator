@@ -1,0 +1,16 @@
+FROM node:20-alpine AS build
+WORKDIR /src
+
+RUN apk add --no-cache git
+RUN git clone https://gitlab.com/mikhrin.e.o.is33/hiveemulator.git .
+
+WORKDIR /src/src/MapClient
+RUN npm install
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /src/src/MapClient/dist /usr/share/nginx/html
+RUN rm -f /usr/share/nginx/html/config.json
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
