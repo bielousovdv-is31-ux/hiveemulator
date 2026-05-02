@@ -1,0 +1,24 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build Project
+        run: dotnet build src/CommunicationControl/DevOpsProject/DevOpsProject.CommunicationControl.API.csproj -c Release
+
+      - name: Deploy to Render
+        if: github.event_name == 'push'
+        run: curl -f ${{ secrets.RENDER_DEPLOY_HOOK }}
